@@ -1,1 +1,1 @@
-# DonkySDK-JS-Modular
+# http://docs.mobiledonky.com/

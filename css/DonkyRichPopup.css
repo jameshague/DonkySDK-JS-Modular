@@ -1,0 +1,95 @@
+﻿/*
+==============================================
+pop-up styles
+==============================================
+*/
+body{
+	background: transparent;
+}
+
+#DonkyRichPopup{
+	background-color:#fff;
+	font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+	padding: 15px;
+	-webkit-box-shadow: 0px 0px 7px 0px rgba(50, 50, 50, 0.40);
+	-moz-box-shadow:    0px 0px 7px 0px rgba(50, 50, 50, 0.40);
+	box-shadow:         0px 0px 7px 0px rgba(50, 50, 50, 0.40);	
+}
+
+.forMobile{
+	margin: 0; 
+}
+
+.forDesktop{
+	margin: 10px;
+}
+
+.badge{
+	position: absolute;
+	font-size: 15px;
+	border-radius: 15px;
+	background-color: #652f8e;
+	padding: 6px;
+	z-index: 1000;
+	border: 2px solid #fff;
+	-webkit-box-shadow: 0px 0px 7px 0px rgba(50, 50, 50, 0.40);
+	-moz-box-shadow:    0px 0px 7px 0px rgba(50, 50, 50, 0.40);
+	box-shadow:         0px 0px 7px 0px rgba(50, 50, 50, 0.40);
+}
+
+.container{
+    position: relative;	
+}
+
+.popupClose {
+	float: right;
+	cursor: pointer;
+	font-size: 15px;
+	position: absolute;
+	z-index: 1000;
+	right: 0;
+}
+
+.avatar img{
+    border: 1px solid #555;
+}	   
+                     
+.content h3{
+    color: #652f8e;
+    font-size: 20px;
+    font-weight: bold;
+    margin: 0 0 10px 0;
+}	                        
+
+p{
+    font-weight: 300;
+    color: #555;
+    line-height: 20px;
+    text-align: left;
+    font-size: 14px;
+	margin: 0;
+}
+                            
+hr{
+    margin: 5px 0 15px 0;
+}                            
+
+
+.glyphicon-remove{
+	color: #666;
+}
+
+.glyphicon-remove:hover{
+	color: #ccc;
+}
+
+
+.col-xs-3, .col-xs-9{
+	padding: 0;
+	margin: 0;
+}
+
+.content{
+    padding-left: 10px;
+}
+

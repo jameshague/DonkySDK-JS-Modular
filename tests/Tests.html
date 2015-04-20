@@ -1,0 +1,1664 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Unit / Integration tests</title>
+	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>       
+	<script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>       
+
+    <script src="../modules/core/donkyData.js" data-cover></script>
+    <script src="../modules/core/donkyAccount.js" data-cover></script>
+    <script src="../modules/core/donkyLogging.js" data-cover></script>
+    <script src="../modules/core/donkyNetwork.js" data-cover></script>
+    <script src="../modules/core/donkyCore.js" data-cover></script>
+
+    <script src="../modules/coreAnalytics/donkyCoreAnalytics.js" data-cover></script>
+    <script src="../modules/automation/donkyAutomation.js" data-cover></script>
+	
+    <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-1.17.1.css">
+    <script src="https://code.jquery.com/qunit/qunit-1.17.1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-mockjax/1.5.3/jquery.mockjax.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/blanket.js/1.1.4/blanket.min.js"></script>
+	
+  </head>
+  <body>
+
+	<div id="qunit"></div>
+	<div id="qunit-fixture"></div>
+
+  
+<script>
+
+    var apikey1 = ">>Enter Key 1<<";
+    var apikey2 = ">>Enter Key 2<<";
+
+
+    var defaultUserDetails = {
+        id: "johnsmith",
+        displayName: "John Smith",
+        firstName: "John",
+        lastName: "Smith",
+        emailAddress: "john.smith@hotmail.co.uk",
+        countryCode: "GBR",
+        phoneNumber: "07979497000",
+    };
+    
+    // same person, just updated some fields
+    var defaultUpdatedUserDetails = {
+        id: "johnsmith",
+        displayName: "Johnny Smith",
+        firstName: "John",
+        lastName: "Smith",
+        emailAddress: "john.smith@gmail.com",
+        countryCode: "GBR",
+        phoneNumber: "07979497300",
+    };
+
+    // a totally different person
+    var replacementUserDetails = {
+        id: "joebloggs",
+        displayName: "Joe Bloggs",
+        firstName: "Joe",
+        lastName: "Bloggs",
+        emailAddress: "joe.bloggs@gmail.com",
+        countryCode: "GBR",
+        phoneNumber: "07979497200",
+    };
+
+    var defaultDeviceDetails = {
+        type: "donkyWebApp",
+        name: "donky",
+    };
+
+    var replacementDeviceDetails = {
+        type: "genericWebApp",
+        name: "generic",
+    };
+
+    function resetDonky(){
+        // TODO: robustify secret population if it is deleted 
+        // Persist the device Id & saecret
+        var deviceId = localStorage.getItem("donky.net.core.deviceId");
+        var secret = localStorage.getItem("donky.net.core.secret");
+        localStorage.clear();
+        localStorage.setItem("donky.net.core.deviceId", deviceId);
+        localStorage.setItem("donky.net.core.secret", secret);
+    }
+
+    function initializeDonky( reset, userDetails, deviceDetails, callback, apiKey ){
+        
+        if(reset) {
+            resetDonky();
+        }
+            
+        donkyCore.initialise({
+            apiKey: apiKey === undefined ? apikey1 : apiKey,    
+            userDetails: userDetails,
+            deviceDetails: deviceDetails,
+            appVersion : "1.9.6.9",
+            resultHandler: function(result) {                    
+                callback(donkyCore, result);
+            }
+        });
+    }
+        
+    QUnit.config.reorder = false;
+
+    /**
+     *
+     */
+    QUnit.testStart(function( details ) {
+        console.log( "%c Now running: " + details.module + details.name, 'background: #222; color: #bada55' );
+    });
+
+    /**
+     *
+     */
+    QUnit.testDone(function( details ) {   
+        console.log( "%c Finished running: " + details.module + details.name, 'background: #222; color: #bada55' );
+        // Need to reset mockjax after test to prevent pollution ...
+        $.mockjaxClear();
+    });
+
+
+
+    QUnit.module( "signalR tests" );
+
+    /**
+     * stop and wait at end of each test ? 
+     */
+    QUnit.test("ensure _stopSignalR() schedules a stop if it is starting", function(assert) {
+    
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            donkyCore.donkyNetwork._stopSignalR(function(){
+                assert.equal( donkyCore.donkyNetwork._getSignalRState(), donkyCore.donkyNetwork.signalrStatuses.stopped, "Signalr should be stopped" );
+
+                done();  
+            });
+        });
+
+    });
+
+
+
+    /**
+     *
+     */
+    QUnit.test("test stop / start signalr", function(assert) {
+       
+        var done = assert.async();
+
+        var startCount = 0;
+        function SignalRStarted(event){
+            console.log( "%c SignalRStarted", 'background: #222; color: #bada55' );
+            startCount++;
+            if(startCount == 1){
+                donkyCore.donkyNetwork._stopSignalR();
+            }else{
+                var started = donkyCore.donkyNetwork._isSignalRStarted();
+                assert.equal( started, true, "Expect to be true" );
+
+                donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+                donkyCore.unsubscribeFromLocalEvent("SignalRStopped", SignalRStopped);
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }          
+        }
+       
+        var stopCount = 0;
+        function SignalRStopped(event) {
+            console.log( "%c SignalRStopped", 'background: #222; color: #bada55' );
+            stopCount++;
+            if(stopCount == 1){
+                var started = donkyCore.donkyNetwork._isSignalRStarted();
+                assert.equal( started, false, "Expect to be false" );
+                donkyCore.donkyNetwork._startSignalR();                      
+            }else{
+                assert.equal( true, false, "Stop handler called twice" );
+            }
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+        donkyCore.subscribeToLocalEvent("SignalRStopped", SignalRStopped);
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
+    });
+
+
+    QUnit.module( "sanity check tests" );
+
+    /**
+     *
+     */
+    QUnit.test("Test each(), isFunction() and isArray()", function(assert) {
+
+
+        function myFunction (){
+        }
+
+
+        var myArray = [1,2,3,4,5,6];
+
+        var myObject = {
+            param1 : 1,
+            param2 : 2,
+            param3 : 3,
+            param4 : 4,
+            param5 : 5,
+            param6 : 6
+        };
+
+        assert.equal( donkyCore._isFunction(myFunction), true, "_isFunction should return true" );
+        assert.equal( donkyCore._isFunction(myArray), false, "_isFunction should return false" );
+        assert.equal( donkyCore._isFunction(myObject), false, "_isFunction should return false" );
+
+        assert.equal( donkyCore._isArray(myFunction), false, "_isArray should return false" );
+        assert.equal( donkyCore._isArray(myArray), true, "_isArray should return true" );
+        assert.equal( donkyCore._isArray(myObject), false, "_isArray should return false" );
+
+        var count = 0;
+        donkyCore._each(myArray, function(index, val) {
+            count += val;
+        });
+        assert.equal( count, 21, "sum of all array elements should be 21" );
+
+        count = 0;
+        donkyCore._each(myObject, function(key, val) {
+            count += val;
+        });
+        assert.equal( count, 21, "sum of all property values should be 21" );
+
+    });
+
+    /**
+     *
+     */
+    QUnit.test("test _extend", function(assert) {
+
+    
+        var myObject1 = {
+            param1 : 1,
+            param2 : 2,
+            param3 : 3,
+        };
+
+        var myObject2 = {
+            param4 : 4,
+            param5 : 5,
+            param6 : 6
+        };
+
+        var extended = donkyCore._extend({}, myObject1, myObject2);
+
+        var count = 0;
+        donkyCore._each(extended, function(key, val) {
+            count += val;
+        });
+        assert.equal( count, 21, "sum of all property values should be 21" );
+
+        donkyCore._extend(myObject1, myObject2);
+
+        count = 0;
+        donkyCore._each(myObject1, function(key, val) {
+            count += val;
+        });
+        assert.equal( count, 21, "sum of all property values should be 21" );
+    });
+
+       /** 
+    * Test version comparison algorithm
+    */
+    QUnit.test( "_versionCompare Unit Test", function( assert ) {
+
+        assert.equal( donkyCore._versionCompare("1.0.0", "1.0.0.0"), 0, "Expect value to 0" );
+
+        assert.equal( donkyCore._versionCompare("2", "1.0.0.0"), 1, "Expect value to -1" );
+
+        assert.equal( donkyCore._versionCompare("1.0.0.0", "2"), -1, "Expect value to 1" );
+    });
+
+   /** 
+    * Test dictionary comparison algorithm
+    */
+    QUnit.test( "_compareDictionaries Unit Test", function( assert ) {
+
+        var a = {};
+        var b = {};
+
+        assert.equal( donkyCore._compareDictionaries(a, b), true, "Expect value to be true" );
+
+        a.param1 = "hello";
+        b.param1 = "there";
+
+        assert.equal( donkyCore._compareDictionaries(a, b), false, "Expect value to be false" );
+
+        b.param1 = "hello";
+
+        assert.equal( donkyCore._compareDictionaries(a, b), true, "Expect value to be true" );
+
+        b.param2 = "hello";
+
+        assert.equal( donkyCore._compareDictionaries(a, b), false, "Expect value to be false" );
+
+    });
+
+    /**
+     *
+     */
+    QUnit.test("donkyData get / set test", function(assert) {
+
+        var dummy = {
+            sampleString: "donky",
+            sampleNumber: 2,
+            sampleDate: new Date().toISOString()
+        };
+
+        donkyCore.donkyData.set("dummy", dummy);
+
+        var dummy2 = donkyCore.donkyData.get("dummy");
+
+        donkyCore.donkyData.remove("dummy");
+                
+        assert.equal( JSON.stringify(dummy), JSON.stringify(dummy2), "Expect Objects to be equal" );
+            
+    });
+
+    /**
+     *
+     */
+    QUnit.test("donkyData get non-existent field", function(assert) {
+
+        donkyCore.donkyData.remove("dummy");
+
+        var dummy = donkyCore.donkyData.get("dummy");
+                               
+        assert.equal( dummy, null, "Expect Object to be null" );
+            
+    });
+
+
+   /** Registers a service that contains a method to return the string HELLO.
+    * Test then gets the service and calls the method. Result should be "HELLO"
+    */
+    QUnit.test( "Register a service Unit Test", function( assert ) {
+
+        var value = "";
+
+        var service = {
+            test:function() {
+                return "HELLO";
+            }
+        };
+
+        donkyCore.registerService("test", service);
+
+        var got = donkyCore.getService("test");
+
+        if(got !== null) {
+            value = got.test();
+        }
+
+        donkyCore.unregisterService("test");
+                
+        assert.equal( value, "HELLO", "Expect value to be hello" );
+    });
+
+   /** UnRegisters the previous service.
+    * Test then gets the service (should fail )and calls the method. Result should be "?"
+    */
+    QUnit.test( "Get a non-existent service Unit Test", function( assert ) {
+            
+        var value = "?";
+
+        var got = donkyCore.getService("test");
+
+        if(got !== null) {
+            value = got.test();
+        }
+                
+        assert.equal( value, "?", "Expect value to be ?" );
+    });
+
+   /** Registers a module and test to see if it is registered.
+    * 
+    */
+    QUnit.test("Register a module and check isRegistered  Unit Test", function(assert) {
+
+        var module = {  
+            name: "testModule", 
+            version:"1.2.3.4" 
+        };
+
+        donkyCore.registerModule(module);
+
+        var registered = donkyCore.isModuleRegistered("testModule");
+
+        assert.equal( registered, true, "Expect value to be true" );
+    });
+
+   /** Registers a module and test to see if it is registered and has min version of 1.0.0.0.
+    * 
+    */
+    QUnit.test("Register a module and check isRegistered with lower version number Unit Test", function(assert) {
+
+        var module = {  
+            name: "testModule", 
+            version:"1.2.3.4" 
+        };
+
+        donkyCore.registerModule(module);
+
+        var registered = donkyCore.isModuleRegistered("testModule", "1.0.0.0");
+
+        assert.equal( registered, true, "Expect value to be true" );
+    });
+
+   /** Registers a module and test to see if it is registered and has min version of 1.0.0.0.
+    */
+    QUnit.test("Register a module and check isRegistered with higher version number Unit Test", function(assert) {
+
+        var module = {  
+            name: "testModule", 
+            version:"1.2.3.4" 
+        };
+
+        donkyCore.registerModule(module);
+
+        var registered = donkyCore.isModuleRegistered("testModule", "2.0.0.0");
+
+        assert.equal( registered, false, "Expect value to be false" );
+    });
+
+   /** Tests formatAssetUrl.
+    */
+    QUnit.test("Tests formatAssetUrl and formatAssetDownloadUrl Unit Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            var url = donkyCore.formatAssetUrl("myId");
+            assert.equal( url, "https://dev-client-api.mobiledonky.com/asset/myId", "Expect value to be \"https://dev-client-api.mobiledonky.com/asset/myId\"" );
+
+            url = donkyCore.formatAssetDownloadUrl("myId","myName");
+            assert.equal( url, "https://dev-client-api.mobiledonky.com/download/myId/myName", "Expect value to be \"https://dev-client-api.mobiledonky.com/download/myId/myName\"" );
+
+            done();            
+        });
+    });
+
+   /** Check singleton class factory
+    */
+    QUnit.test( "Check singleton class factory", function( assert ) {
+
+        var donkyCore1 = new DonkyCore();
+
+        var donkyCore2 = new DonkyCore();
+
+
+        assert.equal( donkyCore1, donkyCore2, "\"Class\" instances should be the same" );
+    });
+
+    
+
+    
+    QUnit.module( "Registration tests" );
+
+    /**
+     *
+     */
+    QUnit.test("test bad apiKey", function(assert) {
+        var done = assert.async();
+
+        // Don't reset and specify a different api key
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+            assert.ok( !result.succeeded, "result.succeeded should be set to false" );
+            assert.equal( result.statusCode, 401, "Registration API should return a 401" );
+            done();  
+            
+        }, "Junk Key");
+    });
+
+
+    /**
+     * What should happen here ?
+     */
+    QUnit.test("test bad apiKey followed by rest call", function(assert) {
+        var done = assert.async();
+
+        // Don't reset and specify a different api key
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+            assert.ok( !result.succeeded, "result.succeeded should be set to false" );
+            assert.equal( result.statusCode, 401, "Registration API should return a 401" );
+
+            //$.mockjax({
+            //    url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
+            //    responseText: null
+            //});
+
+            donkyCore.donkyAccount.updateUserDetails(defaultUpdatedUserDetails, function(result) {
+
+
+                assert.equal( result.succeeded, false, "Expect to fail" );
+
+                done();  
+            });                     
+            
+        }, "Junk Key");
+    });
+
+
+    /**
+     *
+     */
+    QUnit.test("test changed apiKey", function(assert) {
+        
+        var done = assert.async();
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {
+
+            // Don't reset and specify a different api key
+            initializeDonky(false, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+                assert.ok( result.succeeded, "result.succeeded should be set to true" );
+                // leave in a good repstate for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            
+            }, apikey2);
+        });
+    });
+
+
+    /**
+     *
+     */
+    QUnit.test("test missing apiKey when calling init", function(assert) {
+            
+        var done = assert.async();
+
+        resetDonky();
+            
+        donkyCore.initialise({
+            appVersion : "1.9.6.9",
+            resultHandler: function(result) {                    
+                assert.ok( !result.succeeded, "result.succeeded should be set to false" );
+                done();  
+            }
+        });        
+    });
+
+
+    /**
+     *
+     */
+    QUnit.test("test no args when calling init", function(assert) {
+        resetDonky();
+        var done = assert.async();
+
+        donkyCore.initialise();
+
+        setTimeout(function(){
+            assert.ok( !donkyCore.donkyAccount.isRegistered(), "isRegistered should return false" );
+            done();                            
+        }, 1000);
+
+    });
+
+
+
+    /**
+     *
+     */
+    QUnit.test("test missing resultHandler when calling init", function(assert) {
+        resetDonky();
+        var done = assert.async();
+
+        donkyCore.initialise({
+            apiKey: apikey1, 
+            appVersion : "1.9.6.9"
+        });
+
+
+        setTimeout(function(){
+            assert.ok( !donkyCore.donkyAccount.isRegistered(), "isRegistered should return false" );
+            done();                            
+        }, 1000);
+
+    });
+
+
+    /**
+     *
+     */
+    QUnit.test("test _refreshToken", function(assert) {
+
+        var done = assert.async();
+
+        var startCount = 0;
+
+        function SignalRStarted(event){
+            startCount++;
+            if(startCount == 1){
+                // artificially set the expiry time to a week ago
+                var d = new Date();
+                d.setDate(d.getDate()-7);
+                var accessDetails = donkyCore.donkyData.get("accessDetails");
+                accessDetails.expiresOn = d.toISOString();
+                donkyCore.donkyData.set("accessDetails", accessDetails);
+                donkyCore.donkyAccount._checkToken(function() {}, false);
+                // signalr should restart now ...
+            }else{
+                var started = donkyCore.donkyNetwork._isSignalRStarted();
+                assert.equal( started, true, "Expect to be true" );
+                donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+
+            }          
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
+
+    });
+
+
+    QUnit.test("test _refreshToken with a mocked user suspension", function(assert) {
+
+        $.mockjax({
+            url: "https://dev-client-api.mobiledonky.com/api/authentication/gettoken",
+            status: 403,
+            responseText: null
+        });
+
+        var done = assert.async();
+
+        function SignalRStarted(event){
+            donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+
+            // artificially set the expiry time to a week ago
+            var d = new Date();
+            d.setDate(d.getDate()-7);
+            var accessDetails = donkyCore.donkyData.get("accessDetails");
+            accessDetails.expiresOn = d.toISOString();
+            donkyCore.donkyData.set("accessDetails", accessDetails);
+
+            donkyCore.donkyAccount._checkToken(function(result) {
+                
+                assert.equal( result.succeeded, false, "Expect to be false" );
+                assert.equal( donkyCore.donkyData.get("isSuspended"), true, "Expect to be suspended" );
+                done();  
+    
+            }, false);
+
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
+    });
+
+
+    QUnit.module( "Event tests" );
+
+   /** Publish local event and recieve it 
+    */
+    QUnit.test("Publish / subscribe to local event Unit test", function(assert) {
+
+        var done = assert.async();
+    
+        function UnitTestDummy(event){
+            assert.equal( event.type, "UnitTestDummy", "Expect type to be same" );
+            assert.equal( event.data.param1, "hello", "Expect type to be same" );
+            assert.equal( event.data.param2, "world", "Expect type to be same" );
+            donkyCore.unsubscribeFromLocalEvent("UnitTestDummy", UnitTestDummy);
+            done();                            
+        }
+
+        donkyCore.subscribeToLocalEvent("UnitTestDummy", UnitTestDummy);
+
+        donkyCore.publishLocalEvent({ type : "UnitTestDummy", data: {param1:"hello",param2:"world"} });
+    });
+
+
+   /** Publish local event and recieve it 
+    */
+    QUnit.test("Publish / subscribe to local event / Unsubscribe Unit test", function(assert) {
+
+        var done = assert.async();
+
+        var called = false;
+
+        function myLocalEventHandler(event) {
+            called = true;
+        }
+
+        donkyCore.subscribeToLocalEvent("UnitTestDummy", myLocalEventHandler);
+        donkyCore.unsubscribeFromLocalEvent("UnitTestDummy", myLocalEventHandler);
+
+        donkyCore.publishLocalEvent({ type : "UnitTestDummy", data: {param1:"hello",param2:"world"} });
+
+        assert.equal( called, false, "Expect not to be called" );
+
+        done();                
+    });
+
+
+    QUnit.module( "Update user/device tests" );
+
+
+   /** Tests Updating user datails.
+    */
+    QUnit.test("Updates user datails Unit Test", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
+                responseText: null
+            });
+
+            donkyCore.donkyAccount.updateUserDetails(defaultUpdatedUserDetails, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
+
+                assert.equal( JSON.stringify(defaultUpdatedUserDetails), JSON.stringify(updatedDets), "Expect value to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });                     
+        });
+    });
+
+   /** Tests Updating user datails.
+    */
+    QUnit.test("Updates user datails Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            donkyCore.donkyAccount.updateUserDetails(defaultUpdatedUserDetails, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
+
+                assert.equal( JSON.stringify(defaultUpdatedUserDetails), JSON.stringify(updatedDets), "Expect value to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });                        
+        });
+
+    });
+
+   /** Tests Updating Device datails.
+    */
+    QUnit.test("Updates device details Unit Test", function(assert) {
+            
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+                
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/device",
+                responseText: null
+            });
+
+            donkyCore.donkyAccount.updateDeviceDetails(replacementDeviceDetails, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().deviceDetails;
+
+                assert.equal( updatedDets.type, replacementDeviceDetails.type, "Expect type to be same" );
+                assert.equal( updatedDets.name, replacementDeviceDetails.name, "Expect name to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });					            
+        });       
+    });
+
+   /** Tests Updating Device datails.
+    */
+    QUnit.test("Updates device details Integration Test", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+                
+            donkyCore.donkyAccount.updateDeviceDetails(replacementDeviceDetails, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().deviceDetails;
+
+                assert.equal( updatedDets.type, replacementDeviceDetails.type, "Expect type to be same" );
+                assert.equal( updatedDets.name, replacementDeviceDetails.name, "Expect name to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+   /** Tests Updating User Details AND Device datails.
+    */
+    QUnit.test("Updates both user and device details Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            
+            var settings = {
+                userDetails: defaultUpdatedUserDetails,
+                deviceDetails: replacementDeviceDetails
+            };
+                
+            donkyCore.donkyAccount.updateRegistrationDetails(settings, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails();
+
+                assert.equal( JSON.stringify(settings.userDetails), JSON.stringify(updatedDets.userDetails), "Expect value to be same" );
+
+                assert.equal( updatedDets.deviceDetails.type, settings.deviceDetails.type, "Expect type to be same" );
+                assert.equal( updatedDets.deviceDetails.name, settings.deviceDetails.name, "Expect name to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+   /** Tests Updating User Details AND Device datails.
+    */
+    QUnit.test("Updates both user and device details Unit Test", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            var settings = {
+                userDetails: defaultUserDetails,
+                deviceDetails: replacementDeviceDetails
+            };
+                
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration",
+                responseText: null
+            });
+
+            donkyCore.donkyAccount.updateRegistrationDetails(settings, function() {
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails();
+
+                assert.equal( JSON.stringify(settings.userDetails), JSON.stringify(updatedDets.userDetails), "Expect value to be same" );
+
+                assert.equal( updatedDets.deviceDetails.type, settings.deviceDetails.type, "Expect type to be same" );
+                assert.equal( updatedDets.deviceDetails.name, settings.deviceDetails.name, "Expect name to be same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+    QUnit.module( "Content Notification tests" );
+                       
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("Queue / subscribe to ContentNotifications Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+        
+            function cleanup(){
+                assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+                // leave in a good state for next test - stop signalR                    
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+
+
+            function changeColourHandler(notification){
+                assert.equal( notification.data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+                assert.equal( notification.data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+                donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", handler: changeColourHandler}]);
+                
+                // I am inside a sync here so it will fail unless I do with a timeout ...
+                setTimeout(function() {
+                   cleanup();
+                }, 1000);
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", handler: changeColourHandler});
+
+            var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+
+            donkyCore.queueContentNotifications(notification);
+
+            // Need to synchronise to get it to send ;-)
+            donkyCore.donkyNetwork.synchronise();            
+        });
+    });
+
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("Queue / subscribe to ContentNotifications Integration Test over REST", function(assert) {
+        var done = assert.async();
+        
+        function doTest(){
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+
+            var interval = null;
+
+            function changeColourHandler(notification) {
+
+                clearInterval(interval);
+                assert.equal( notification.data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+                assert.equal( notification.data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+                donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", handler: changeColourHandler}]);
+
+                // turn back on or next test ;-)
+                donkyCore.donkyNetwork._useSignalR(true);
+                done();  
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", handler: changeColourHandler});
+
+            var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+
+            donkyCore.queueContentNotifications(notification);
+
+            // Need to synchronise to get it to send ;-)
+            donkyCore.donkyNetwork.synchronise();
+
+            interval = setInterval(function(){
+                // Need to synchronise again to recieve the notification ;-)
+                donkyCore.donkyNetwork.synchronise();
+            },1000);
+        }
+
+        function SignalRStarted(){
+            donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+
+            // turn off signalr to force sync over rest api
+            donkyCore.donkyNetwork._stopSignalR(function() {
+                donkyCore.donkyNetwork._useSignalR(false);
+                doTest();
+            });                     
+
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
+    });
+
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("Queue / subscribe to ContentNotifications Integration Test over REST v2", function(assert) {
+        
+        resetDonky();
+
+        var done = assert.async();
+        
+        assert.equal( donkyCore.donkyNetwork._getSignalRState(), donkyCore.donkyNetwork.signalrStatuses.stopped, "Expect signalr to be already stopped!" );
+
+        var module = {
+            name: "demoApp",
+            version: "1.0.0.0",
+        };
+
+        var interval = null;
+
+        function changeColourHandler(notification) {
+
+            clearInterval(interval);
+            assert.equal( notification.data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+            assert.equal( notification.data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+            donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", handler: changeColourHandler}]);
+
+            assert.ok( true, "result.succeeded should be set to false" );
+            
+            done();  
+        }
+
+        donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", handler: changeColourHandler});
+
+        donkyCore.initialise({
+            apiKey: apikey1,    
+            userDetails: defaultUserDetails,
+            deviceDetails: defaultDeviceDetails,
+            appVersion : "1.9.6.9",
+            useSignalR : false,
+            resultHandler: function(result) {                    
+                
+                assert.ok( result.succeeded, "result.succeeded should be set to false" );
+
+                var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+
+                donkyCore.queueContentNotifications(notification);
+
+                interval = setInterval(function(){
+                    // Need to synchronise again to recieve the notification ;-)
+                    donkyCore.donkyNetwork.synchronise();
+                },1000);
+            }
+        });
+
+    });
+
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("SEND / subscribe to ContentNotifications Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+
+            function cleanup(){
+                assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+                // leave in a good state for next test - stop signalR                    
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+
+
+            function changeColourHandler(notification){
+                assert.equal( notification.data.customData.newColour, "#CDE", "Expect type to be same" );
+                assert.equal( notification.data.customData.intervalSeconds, 10, "Expect type to be same" );
+
+                donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", handler: changeColourHandler}]);
+
+                // I am inside a sync here so it will fail unless I do with a timeout ...
+                setTimeout(function() {
+                   cleanup();
+                }, 1000);
+
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", handler: changeColourHandler});
+
+            var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", {
+                "newColour": "#CDE",
+                "intervalSeconds": 10
+            });
+
+            donkyCore.sendContentNotifications(notification);            
+        });                
+    });
+
+    QUnit.test("SEND / subscribe multiple different ContentNotifications with same handler Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+
+            //function cleanup(){
+            //    assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+            //    // leave in a good state for next test - stop signalR                    
+            //    donkyCore.donkyNetwork._stopSignalR(function(){
+            //        done();  
+            //    });                     
+            //}
+
+            var count = 0;
+            function genericNotificationHandler(notification) {
+                
+                switch( notification.data.customType ){
+                    case "ChatMessage":{
+                            assert.equal( notification.data.customData.message, "hello there", "Expect to be \"hello there\"" );
+                            count++;
+                        }
+                        break;
+
+                    case "ChessMove":{
+                            assert.equal( notification.data.customData.get, "F4", "Expect to be \"F4\"" );
+                            assert.equal( notification.data.customData.move, "A1", "Expect to be \"A1\"" );
+                            count++;
+                        }
+                        break;
+
+                    default:
+                        break;
+                }
+                if(count >= 2){
+                    donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "ChatMessage", handler: genericNotificationHandler},{notificationType: "ChessMove", handler: genericNotificationHandler}]);                    
+
+                    // leave in a good state for next test
+                    donkyCore.donkyNetwork._stopSignalR(function(){
+                        done();  
+                    });                     
+                }
+            }
+
+            donkyCore.subscribeToContentNotifications( module, [{notificationType: "ChatMessage", handler: genericNotificationHandler}, {notificationType: "ChessMove", handler: genericNotificationHandler}]);
+
+            var chatNotification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "ChatMessage", { message : "hello there" });
+            var chessNotification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "ChessMove", { get: "F4", move : "A1" });
+
+            donkyCore.sendContentNotifications([chatNotification,chessNotification]);            
+        });                
+    });
+
+    QUnit.test("SEND / subscribe multiple different ContentNotifications with different handlers Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+
+            function cleanup(){
+                assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+                // leave in a good state for next test - stop signalR                    
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+
+            var count = 0;
+    
+            function chatMessageNotificationHandler(notification) {
+                assert.equal( notification.data.customData.message, "hello there", "Expect to be \"hello there\"" );
+                count++;
+
+                donkyCore.unsubscribeFromContentNotifications(module, {notificationType: "ChatMessage", handler: chatMessageNotificationHandler});                    
+
+                if(count == 2){
+                    // I am inside a sync here so it will fail unless I do with a timeout ...
+                    // These if(count == 2) blocks are duplicatd to be robust to the notifications coming in the reverse order
+                    setTimeout(function() {
+                       cleanup();
+                    }, 1000);
+                }                    
+            }
+
+            function chessMoveNotificationHandler(notification) {
+                assert.equal( notification.data.customData.get, "F4", "Expect to be \"F4\"" );
+                assert.equal( notification.data.customData.move, "A1", "Expect to be \"A1\"" );
+                count++;
+                
+                donkyCore.unsubscribeFromContentNotifications(module, {notificationType: "ChatMessage", handler: chessMoveNotificationHandler});    
+    
+                if(count == 2){
+                    // I am inside a sync here so it will fail unless I do with a timeout ...
+                    // These if(count == 2) blocks are duplicatd to be robust to the notifications coming in the reverse order
+                    setTimeout(function() {
+                       cleanup();
+                    }, 1000);
+                }                    
+            }
+    
+            donkyCore.subscribeToContentNotifications( module, [{notificationType: "ChatMessage", handler: chatMessageNotificationHandler}, {notificationType: "ChessMove", handler: chessMoveNotificationHandler}]);
+
+            var chatNotification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "ChatMessage", { message : "hello there" });
+            var chessNotification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "ChessMove", { get: "F4", move : "A1" });
+
+            donkyCore.sendContentNotifications([chatNotification, chessNotification]);
+
+        });                
+    });
+
+
+   /** Get a non-existent server notification 
+    */            
+    QUnit.test("Try to get a non-existent server notification Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            donkyCore.donkyNetwork.getServerNotification("775ebba2-9af5-4b3e-97ec-7e8949345e20", function(notification){
+                
+                assert.equal( notification, null, "Expect notification to ne null" );
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("SEND / subscribe to Outbound Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+            
+            function SendContentHandler(notification){
+                assert.equal( notification.definition.content.data.newColour, "#CDE", "Expect type to be same" );
+                assert.equal( notification.definition.content.data.intervalSeconds, 10, "Expect type to be same" );
+                donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "SendContent", handler: SendContentHandler}]);
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+            
+            donkyCore.subscribeToOutboundNotifications(module, { notificationType: "SendContent", handler: SendContentHandler });
+
+            var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", {
+                "newColour": "#CDE",
+                "intervalSeconds": 10
+            });
+
+            donkyCore.sendContentNotifications(notification);            
+
+        });
+    });
+
+
+    QUnit.module( "Initialize tests" );
+
+    QUnit.test( "Check initialize works", function( assert ) {
+        
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+            assert.ok( result.succeeded, "result.succeeded should be set to true" );
+            // leave in a good state for next test
+            donkyCore.donkyNetwork._stopSignalR(function(){
+                done();  
+            });                     
+        });
+    });
+
+    QUnit.test( "Check initialize works if repeatedly called ", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {
+            initializeDonky(false, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+                assert.ok( result.succeeded, "result.succeeded should be set to true" );
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+
+            });
+        });
+    });
+
+    QUnit.test( "Check initialize works if repeatedly and with no args ", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, undefined, undefined, function() {                
+            /*don't reset local storage on second init*/
+            initializeDonky(/*don't reset local storage*/false, undefined, undefined, function(donkyCore, result ) {
+                assert.ok( result.succeeded, "result.succeeded should be set to true" );
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });
+        });
+    });
+
+    QUnit.test( "Check initialize works if repeatedly and with different user dets and NO device dets", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+            
+            assert.ok(result.succeeded, "result.succeeded should be set to true");
+
+            /*don't reset local storage on second init*/
+            initializeDonky(/*don't reset local storage*/false, defaultUpdatedUserDetails, defaultDeviceDetails, function(donkyCore, result ) {
+
+                assert.ok(result.succeeded, "result.succeeded should be set to true");
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
+
+                assert.equal(updatedDets.phoneNumber, defaultUpdatedUserDetails.phoneNumber, "Phone number updated");
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });
+        });
+    });
+
+    QUnit.test("Check initialize works if called repeatedly and with different device dets 2nd time and NO user dets", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {
+
+            /*don't reset local storage on second init*/
+            initializeDonky(/*don't reset local storage*/false, undefined, replacementDeviceDetails, function(donkyCore, result ) {
+                assert.ok( result.succeeded, "result.succeeded should be set to true" );
+
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails();
+
+                assert.equal( updatedDets.deviceDetails.type, replacementDeviceDetails.type, "device type updated" );
+                assert.equal( updatedDets.deviceDetails.name, replacementDeviceDetails.name, "device name updated" );
+
+                assert.equal( updatedDets.userDetails.id, defaultUserDetails.id, "id same" );
+                assert.equal( updatedDets.userDetails.displayName, defaultUserDetails.displayName, "displayName same" );
+                assert.equal( updatedDets.userDetails.firstName, defaultUserDetails.firstName, "firstName same" );
+                assert.equal( updatedDets.userDetails.lastName, defaultUserDetails.lastName, "lastName same" );
+                assert.equal( updatedDets.userDetails.emailAddress, defaultUserDetails.emailAddress, "emailAddress same" );
+                assert.equal( updatedDets.userDetails.countryCode, defaultUserDetails.countryCode, "countryCode same" );
+                assert.equal( updatedDets.userDetails.phoneNumber, defaultUserDetails.phoneNumber, "phoneNumber same" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+
+            });
+        });
+    });
+
+    QUnit.test( "Check initialize works in anonymous mode", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, undefined, undefined, function(donkyCore, result) {
+            assert.ok( result.succeeded, "result.succeeded should be set to true" );
+            // leave in a good state for next test
+            donkyCore.donkyNetwork._stopSignalR(function(){
+                done();  
+            });                     
+        });
+    });
+
+    QUnit.test( "Check validation errrors with bad email / phone number", function( assert ) {
+        var done = assert.async();
+
+        var userDetails = {
+
+            id: "johnsmith",
+            displayName: "John Smith",
+            firstName: "John",
+            lastName: "Smith",
+            emailAddress: "john.smith_hotmail.co.uk",/*Email addr is bad ...*/ 
+            countryCode: "GBR",
+            phoneNumber: "07979497000"
+        };
+
+        initializeDonky(true, userDetails, undefined, function(donkyCore, result) {
+            assert.ok( !result.succeeded, "result.succeeded should be set to false" );
+            assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
+            assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
+            assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
+            assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
+            assert.ok( $.isArray(result.response), "response should contain array of validation errors" );
+
+            done();  
+        });        
+    });
+
+    QUnit.test( "Check replace registration works", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            var newDets = {
+                userDetails: replacementUserDetails,
+                deviceDetails:replacementDeviceDetails
+            };
+            donkyCore.donkyAccount.replaceRegistration(newDets, function(replaceResult) {
+                assert.ok( replaceResult.succeeded, "replaceResult.succeeded should be set to true" );         
+                    
+                var updatedDets = donkyCore.donkyAccount.getRegistrationDetails();
+
+                assert.equal( updatedDets.userDetails.id, replacementUserDetails.id, "id updated" );
+                assert.equal( updatedDets.userDetails.displayName, replacementUserDetails.displayName, "displayName updated" );
+                assert.equal( updatedDets.userDetails.firstName, replacementUserDetails.firstName, "firstName updated" );
+                assert.equal( updatedDets.userDetails.lastName, replacementUserDetails.lastName, "lastName updated" );
+                assert.equal( updatedDets.userDetails.emailAddress, replacementUserDetails.emailAddress, "emailAddress updated" );
+                assert.equal( updatedDets.userDetails.countryCode, replacementUserDetails.countryCode, "countryCode updated" );
+                assert.equal( updatedDets.userDetails.phoneNumber, replacementUserDetails.phoneNumber, "phoneNumber updated" );
+                    
+                assert.equal( updatedDets.deviceDetails.type, replacementDeviceDetails.type, "type updated" );
+                assert.equal( updatedDets.deviceDetails.name, replacementDeviceDetails.name, "name updated" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+    QUnit.module( "Logging tests" );
+
+    /**
+     * Log level test
+     */
+    QUnit.test("Log level test", function(assert) {
+        
+        $.mockjax({
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            responseText: {alwaysSubmitErrors: true}
+        });
+        
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        
+        donkyCore.donkyLogging._setLogLevel(donkyCore.donkyLogging.logLevel.Fatal);
+
+        var currentLog = donkyCore.donkyLogging.getLog();
+
+        donkyCore.donkyLogging.debugLog("This should not get into the logfile");
+        donkyCore.donkyLogging.infoLog("This should not get into the logfile");
+        donkyCore.donkyLogging.warnLog("This should not get into the logfile");
+        donkyCore.donkyLogging.errorLog("This should not get into the logfile");
+
+        var newLog = donkyCore.donkyLogging.getLog();
+
+        donkyCore.donkyLogging._setLogLevel(donkyCore.donkyLogging.logLevel.Debug);
+                               
+        assert.equal( currentLog, newLog, "Expect logfiles to be the same" );
+            
+    });
+
+    /**
+     * Log level test
+     */
+    QUnit.test("Log level test 2", function(assert) {
+
+        $.mockjax({
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            responseText: {alwaysSubmitErrors: true}
+        });
+
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        donkyCore.donkyLogging._setLogLevel(donkyCore.donkyLogging.logLevel.Fatal);
+        donkyCore.donkyLogging.clearLog();
+
+        var currentLog = donkyCore.donkyLogging.getLog();
+
+        donkyCore.donkyLogging.fatalLog("This should get into the logfile");
+
+        var newLog = donkyCore.donkyLogging.getLog();
+
+        donkyCore.donkyLogging._setLogLevel(donkyCore.donkyLogging.logLevel.Debug);
+
+        assert.equal( currentLog, null, "Expect currentLog to be empty" );
+        assert.ok(newLog.indexOf("This should get into the logfile") !== -1, "logfile should contain \"This should get into the logfile\"");            
+    });
+
+    /**
+     * Log level test
+     */
+    QUnit.test("Log level test 3", function(assert) {
+
+        $.mockjax({
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            responseText: {alwaysSubmitErrors: true}
+        });
+
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        var done = assert.async();
+
+        function logMessageHandler(event) {
+
+            assert.ok(event.data.message.indexOf("This should get into the logfile") !== -1, "event.message should contain \"This should get into the logfile\"");            
+
+            donkyCore.unsubscribeFromLocalEvent("LogMessage", logMessageHandler);
+
+            done();
+        }
+
+        donkyCore.subscribeToLocalEvent("LogMessage", logMessageHandler);
+
+        donkyCore.donkyLogging.debugLog("This should get into the logfile");
+
+    });
+
+
+
+
+
+   /** Submit debug log  
+    */
+    QUnit.test("submitLog Unit test", function(assert) {
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");    
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                responseText: {alwaysSubmitErrors: true}
+            });
+
+            // make sure logfile not empty from prev test
+            //donkyCore.donkyLogging.debugLog("This should get into the logfile");
+
+            donkyCore.submitLog(function(submitLogresult) {                    
+                assert.ok( submitLogresult.succeeded, "result.succeeded succeeds" );
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+
+   /** Submit debug log  
+    */
+    QUnit.test("submitLog Integration test", function(assert) {
+        $.mockjax({
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            responseText: {alwaysSubmitErrors: true}
+        });
+        
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            donkyCore.submitLog(function(submitLogresult) {
+                    
+                assert.ok( submitLogresult.succeeded, "result.succeeded succeeds" );
+
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            });            
+        });
+    });
+
+    
+    // Log level test
+    QUnit.test("test Automatic Device log on error", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            // make sure AlwaysSubmitErrors initialy set to "true"
+            var configuration = donkyCore.donkyData.get("configuration");
+            configuration.configurationItems.AlwaysSubmitErrors = "true";
+            donkyCore.donkyData.set("configuration", configuration);
+
+            // Mock ajax call returning alwaysSubmitErrors  = false
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                responseText: {alwaysSubmitErrors: false}
+            });
+
+            donkyCore.donkyLogging.errorLog("This should trigger an Automatic Device log and set alwaysSubmitErrors to false in config");
+
+            setTimeout(function(){
+                configuration = donkyCore.donkyData.get("configuration");
+                assert.equal( configuration.configurationItems.AlwaysSubmitErrors, "false", "Expect AlwaysSubmitErrors to be false" );
+
+                // set back to true
+                configuration.configurationItems.AlwaysSubmitErrors = "true";
+                donkyCore.donkyData.set("configuration", configuration);
+                    
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }, 1000);            
+        });
+    });
+
+    QUnit.test("test _updateClientInfoIfChanged ", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+        
+            var module = {  
+                name: "testModule2", 
+                version:"9.9.9" 
+            };
+
+            donkyCore.registerModule(module);
+
+            donkyCore._updateClientInfoIfChanged();
+
+            setTimeout(function() {
+                var client = donkyCore.donkyAccount._getClient();
+
+                assert.equal( client.moduleVersions.testModule2, "9.9.9", "ClientInfo updated" );
+         
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }, 5000);
+
+        });
+    });
+
+    QUnit.module( "Automation tests" );
+
+    QUnit.test("test 3rd party triggers ", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+            
+            donkyAutomation.executeThirdPartyTrigger("pushTrigger", {});
+
+            assert.equal( true, true, "Dummy assert" );
+
+            done(); 
+        });
+    });
+
+    QUnit.module( "Analytics tests" );
+    // donky app closed / donky app open events in iOS - I can hook int donkyInitialised
+    // record app closed
+    // record app open
+    QUnit.test("test analytics", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            donkyCoreAnalytics.analyse();
+
+            assert.equal( true, true, "Dummy assert" );
+
+            done(); 
+        });
+    });
+
+</script>
+  
+		
+  </body>
+</html>

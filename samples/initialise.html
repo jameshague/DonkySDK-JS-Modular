@@ -1,0 +1,37 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title> initialise</title>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="../modules/require-config-debug.js"></script>
+</head>
+<body>
+    <div id="logPanel"></div>
+
+    <script>
+        var $logPanel=$("#logPanel");
+        function log(message) {
+            $logPanel.append("<div>"+message+"</div>");
+        }
+
+        require(['donkyCore'],function(donkyCore) {
+
+            donkyCore.initialise({
+                apiKey: ">>Enter API Key <<",
+                resultHandler: function(result) {
+
+                    log("<code>"+JSON.stringify(result)+"</code>");
+
+                    if(result.succeeded) {
+                        var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                        log("<code>"+JSON.stringify(registrationDetails)+"</code>");
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>

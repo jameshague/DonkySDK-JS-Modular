@@ -1,0 +1,171 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title> initialise</title>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="../modules/require-config-debug.js"></script>
+</head>
+<body>
+
+    <canvas id="jumbotron" width="640" height="480"></canvas>
+
+    <script>
+
+        require(['donkyCore'],function(donkyCore) {
+
+            var rows=3;
+            var columns=3;
+
+            var canvas=document.getElementById("jumbotron");
+
+            canvas.width=window.innerWidth;
+            canvas.height=window.innerHeight;
+
+
+            var width=canvas.width,height=canvas.height;
+
+            var cellWidth=Math.floor(width/columns);
+            var cellHeight=Math.floor(height/rows);
+
+            if(canvas.getContext) {
+                var context=canvas.getContext('2d');
+            }
+
+            function resetCell(x,y) {
+                context.fillStyle="#000";
+
+                context.fillRect(x*cellWidth,
+                                    y*cellHeight,
+                                    cellWidth,
+                                    cellHeight);
+            }
+
+            function randomColor() {
+                return "#"+((1<<24)*Math.random()|0).toString(16);
+            }
+
+            function randomTimeout() {
+                return Math.floor(Math.random()*2000)+1;
+            }
+
+            function queueCustomShizz(id) {
+                var data=[
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "0,0"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "1,0"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "2,0"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "0,1"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "1,1"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "2,1"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "0,2"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "1,2"
+                        },
+                        {
+                            "newColour": randomColor(),
+                            "intervalMilliseconds": randomTimeout(),
+                            "position": "2,2"
+                        }
+                ];
+
+                var notification=donkyCore.createContentNotificationForSpecifiedUsers(id,"changeColour",data);
+                donkyCore.sendContentNotifications(notification);
+            }
+
+            // setup some Content Notification subscriptions ...
+            donkyCore.subscribeToContentNotifications({
+                name: "demoApp",
+                version: "1.0.0.0",
+            },
+                {
+                    notificationType: "changeColour",
+                    handler: function(notification) {
+                        //console.log('%c changeColour : ' + JSON.stringify(notification), 'background: #222; color: #bada55');
+
+                        $.each(notification.data.customData,function(index,info) {
+                            console.log('%c cellInfo : '+JSON.stringify(info),'background: #222; color: #bada55');
+
+                            context.fillStyle=info.newColour;
+                            var coords=info.position.split(",");
+                            var x=parseInt(coords[0]);
+                            var y=parseInt(coords[1]);
+
+                            context.fillRect(x*cellWidth,
+                                              y*cellHeight,
+                                              cellWidth,
+                                              cellHeight);
+
+                            console.log("%c setting timeout "+info.intervalMilliseconds,'background: #444; color: #FF0000');
+
+                            setTimeout(function() {
+                                resetCell(x,y);
+                            },info.intervalMilliseconds);
+
+                        });
+                    }
+                });
+
+            donkyCore.initialise({
+                apiKey: ">>Enter API Key <<",
+                resultHandler: function(result) {
+
+                    console.log("%c initialise resultHandler : "+JSON.stringify(result),'background: #ddd; color: #ff00ff');
+
+                    // Object passed in has a succeeded boolean property ...
+                    if(result.succeeded) {
+                        // initialization has succeeded, go on and do whatewver ...
+
+                        var user=donkyCore.donkyAccount.getRegistrationDetails();
+
+                        console.log("%c currentDeviceUser : "+JSON.stringify(user),'background: #ddd; color: #ffff00');
+
+                        queueCustomShizz(user.userDetails.id);
+
+                        setInterval(function() { queueCustomShizz(user.userDetails.id); },2000);
+
+                    } else {
+                        // initialization has failed, probably a validation error on user datails ...
+                        //
+                        alert("initialise failed ;-(\n\n"+JSON.stringify(result));
+
+                    }
+
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>
