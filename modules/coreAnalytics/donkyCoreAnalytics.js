@@ -65,7 +65,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyCoreAnalytics
 		 */
 		function DonkyCoreAnalytics() {
             console.log("Constructing DonkyCoreAnalytics");

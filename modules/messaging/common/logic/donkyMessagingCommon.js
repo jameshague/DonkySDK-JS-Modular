@@ -22,7 +22,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyMessagingCommon
 		 */
 		function DonkyMessagingCommon() {
 		    console.log("Constructing DonkyMessagingCommon");

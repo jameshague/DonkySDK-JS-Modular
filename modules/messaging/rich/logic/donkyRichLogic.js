@@ -225,7 +225,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyRichLogic
 		 */
 		function DonkyRichLogic() {
 

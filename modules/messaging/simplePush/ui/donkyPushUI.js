@@ -283,7 +283,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyPushUI
 		 */
 		function DonkyPushUI() {
             console.log("Constructing DonkyPushUI");

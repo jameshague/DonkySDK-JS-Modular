@@ -196,7 +196,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyRichPopupUI
 		 */
 		function DonkyRichPopupUI() {
 

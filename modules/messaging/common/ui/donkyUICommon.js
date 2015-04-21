@@ -19,7 +19,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyUICommon
 		 */
 		function DonkyUICommon() {
             console.log("Constructing DonkyUICommon");

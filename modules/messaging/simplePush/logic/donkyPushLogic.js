@@ -182,7 +182,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyPushLogic
 		 */
 		function DonkyPushLogic() {
 
@@ -193,7 +194,7 @@
             donkyCore.subscribeToDonkyNotifications(
                 {
                     name: "DonkyPushLogic",
-                    version: "1.0.0.0",
+                    version: "2.0.0.0",
                 },
                 { 
                     notificationType: "SimplePushMessage",             

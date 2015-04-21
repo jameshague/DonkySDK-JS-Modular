@@ -24,7 +24,6 @@ var DonkyData = (function() {
         namespace : "donky.net.core." 
     };
 
-	
 	var _db = {
         /** 
          * Get raw value as string from local storage.

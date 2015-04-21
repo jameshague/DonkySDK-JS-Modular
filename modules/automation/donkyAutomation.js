@@ -22,7 +22,8 @@
 		//====================
 
 		/**
-		 * @constructor
+		 * @class
+		 * @name DonkyAutomation
 		 */
 		function DonkyAutomation() {
             console.log("Constructing DonkyAutomation");
