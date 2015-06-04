@@ -255,7 +255,7 @@
                 var unreadPushMessageCount = pushMessageCount - 1;
 
                 var model = {
-                    AvatarUrl: message.avatarAssetId != null ? donkyCore.formatAssetUrl(message.avatarAssetId) : defaults.defaultAvatar,					
+                    AvatarUrl: (message.avatarAssetId != null && message.avatarAssetId != "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : defaults.defaultAvatar,					
                     NotificationId: notification.id,
                     SenderDisplayName: message.senderDisplayName,
                     Body: message.body,
@@ -288,6 +288,13 @@
 		 */
 		function DonkyPushUI() {
             console.log("Constructing DonkyPushUI");
+
+            var module = {  
+                name: "DonkyPushUI", 
+                version:"2.0.0.0" 
+            };
+
+            donkyCore.registerModule(module);
 		}
 
 		DonkyPushUI.prototype = {

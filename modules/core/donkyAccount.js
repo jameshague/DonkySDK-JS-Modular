@@ -22,6 +22,9 @@ var DonkyAccount = (function() {
         tokenExpiryCheckInterval: 10000
     };
 
+    // handle returned from setInterval for checking token
+    var checkTokenInterval = null;
+
     /*
      * Creates donkyAccount object.
      * @constructor
@@ -44,7 +47,12 @@ var DonkyAccount = (function() {
         // Keep a closured reference to the instance
         _instance = this;
 
-        setInterval(function() { _instance._checkToken(function() {}); }, defaults.tokenExpiryCheckInterval);
+        // This event is ALWAYS published on succesful initialisation and currently AFTER a NewRegistration event should the initialize function call _register
+        donkyCore.subscribeToLocalEvent("DonkyInitialised", function(event) {
+            if (checkTokenInterval === null) {
+                checkTokenInterval = setInterval(function() { _instance._checkToken(function() {}); }, defaults.tokenExpiryCheckInterval);
+            }
+        });
 
         return _instance;
     };
@@ -71,44 +79,54 @@ var DonkyAccount = (function() {
         return M.join(' ');
     }
 
+
+    /** 
+     * This function checks the expiry of the REST API authentication token.
+     * @returns {Boolean} returns true if expired, false otherwise
+     */
+    DonkyAccount.prototype._isTokenExpired = function() {
+        var accessDetails = donkyCore.donkyData.get("accessDetails");
+
+        if (accessDetails !== null && accessDetails !== undefined) {
+            var expired = false;
+            var expiresOn = new Date(accessDetails.expiresOn);
+            var now = new Date();
+            if (expiresOn > now) {
+                var timeDiffMs = Math.abs(now.getTime() - expiresOn.getTime());
+                var diffSeconds = Math.ceil(timeDiffMs / 1000);
+                // add a minute on so we don't get a race condition
+                if (diffSeconds < 60) {
+                    expired = true;
+                }
+            } else {
+                expired = true;
+            }
+
+            return expired;
+        } else {
+            return true;
+        }
+    }
+
     /** 
      * This function checks the expiry of the REST API authentication token and refreshes it if it has expired.
      * A token with less than a minute left will be deemed to be expired so we update it prior to expiry.
      *
      * @param {Callback} callback - function to call after refresh or immediately if token is valid 
-     * @param {Boolean} initializing - Boolean to differentiate between when we are initializing the sdk or when we are just checking (optional)
+     * @param {Boolean} initializing - Boolean to differentiate between when we are initializing the sdk or when we are just checking (optional) - if a user is suspended we check to see if that has changed  
      */
     DonkyAccount.prototype._checkToken = function(callback, initializing) {
+        
+        if ((_instance.isRegistered() && !_instance._isSuspended() )|| initializing === true) {
+            
+            var refresh = _instance._isTokenExpired();
 
-        if (!_instance._isSuspended() || initializing === true) {
-            var accessDetails = donkyCore.donkyData.get("accessDetails");
-
-            if (accessDetails !== null && accessDetails !== undefined) {
-
-                var expiresOn = new Date(accessDetails.expiresOn);
-                var now = new Date();
-                var refresh = false;
-                if (expiresOn > now) {
-                    var timeDiffMs = Math.abs(now.getTime() - expiresOn.getTime());
-                    var diffSeconds = Math.ceil(timeDiffMs / 1000);
-                    if (diffSeconds < 60) {
-                        refresh = true;
-                    }
-                    donkyCore.donkyLogging.debugLog("Token expires in " + diffSeconds + " seconds" + (refresh ? " (refreshing)" : ""));
-                } else {
-                    donkyCore.donkyLogging.debugLog("Token expired");
-                    refresh = true;
-                }
-
-                if (refresh) {
-                    this._refreshToken(callback);
-                } else {
-                    callback({ succeeded: true });
-                }
+            if (refresh) {
+                this._refreshToken(callback);
             } else {
-                donkyCore.donkyLogging.warnLog("no accessDetails to check");
                 callback({ succeeded: true });
             }
+
         } else {
             callback({succeeded: false});
         }
@@ -129,11 +147,15 @@ var DonkyAccount = (function() {
 
         var signalrState = donkyCore.donkyNetwork._getSignalRState();
 
-	    if (signalrState == donkyCore.donkyNetwork.signalrStatuses.initializing || 
-            signalrState == donkyCore.donkyNetwork.signalrStatuses.starting ||
-            signalrState == donkyCore.donkyNetwork.signalrStatuses.started) {
-            donkyCore.donkyNetwork._stopSignalR();
-            restart = true;
+        switch (signalrState) {
+            case donkyCore.donkyNetwork.signalrStatuses.initializing:
+            case donkyCore.donkyNetwork.signalrStatuses.starting:
+            case donkyCore.donkyNetwork.signalrStatuses.started:
+                donkyCore.donkyNetwork._stopSignalR();
+                restart = true;
+                break;
+            default:
+                break;
         }
 
         var gettokenRequest = {
@@ -583,7 +605,7 @@ var DonkyAccount = (function() {
 
 /**
  *  Gets the tags for the current user.
- *  @param {Callback} - callback to supply returned Array of TagOption objects
+ *  @param {Callback} callback - callback to supply returned Array of TagOption objects
  */    
     DonkyAccount.prototype.getTags = function(callback) {
 		try{
@@ -608,8 +630,8 @@ var DonkyAccount = (function() {
 
 /**
  *  Sets the selected tags for the current user.
- *  @param {String[]} tags - The selected tags.
- *  @param {Callback} - callback to supply result
+ *  @param {TagOption[]} tags - The selected tags.
+ *  @param {Callback} callback - callback to supply result
  */    
     DonkyAccount.prototype.putTags = function(selectedTags, callback) {
 		try{

@@ -145,6 +145,10 @@ var DonkyCore = (function() {
             },
             true);
 
+            _instance.subscribeToLocalEvent("DonkyInitialised", function(event) {
+                _instance._updateClientInfoIfChanged();
+            });
+
         return _instance;
     };
 
@@ -227,6 +231,21 @@ var DonkyCore = (function() {
             _instance._isArray(pendingClientNotifications) &&
             pendingClientNotifications.length > 0;
     }
+
+    /**
+     * Internal function to return the string length of the sum of any Pending Client Notifications.
+     * @returns {Number}
+     */
+    DonkyCore.prototype._getPendingNotificationsLength = function() {
+        var pendingClientNotifications = _instance.donkyData.getString("PendingClientNotifications");
+        var len = 0;
+        if (pendingClientNotifications !== null &&
+            pendingClientNotifications !== undefined) {
+            len = pendingClientNotifications.length;
+        }
+        return len;
+    }
+
 
     /**
      * Internal function to retrieve pending client notifications to execute. Any notifications in the ExecutingClientNotifications
@@ -338,10 +357,10 @@ var DonkyCore = (function() {
     }
 
     /**
-     * Internal function to process a batch of client notifications AFTER they have succesfully been sent. 
-    *  They are farmed out to any subscribers. Any failed ones will not be in this batch (???)
+     * Internal function to process a batch of client notifications BEFORE they have been sent. 
+     * They are farmed out to any subscribers.
      */
-    DonkyCore.prototype._processSentClientNotifications = function(clientNotifications) {
+    DonkyCore.prototype._processPendingClientNotifications = function(clientNotifications) {
 
         _instance._each(clientNotifications, function(index, clientNotification) {
 
@@ -354,29 +373,88 @@ var DonkyCore = (function() {
     }
 
     /** 
+     * Validates SendContent Notifications - checks for payloads greater than CustomContentMaxSizeBytes. Any messages that are too large will be removed and a validation error will be returned.
+     * @param {ContentNotification[]} notifications
+     */
+    function isSendContentNotificationValid(notification) {
+        var valid = true;
+
+        if (notification.content.data !== null &&
+            notification.content.data !== undefined) {
+        
+            var configuration = _instance.donkyData.get("configuration");
+            var maxBytes = parseInt( configuration.configurationItems.CustomContentMaxSizeBytes );
+            var maxSignalRBytes = parseInt( configuration.configurationItems.SignalRMaxMessageSizeBytes );
+            // This looks to be the limit of SignalR ...
+
+            var length = JSON.stringify(notification.content.data).length;
+
+            if (length > maxSignalRBytes) {
+                valid = false;
+                _instance.donkyLogging.debugLog("ContentNotification size too large (" + length + "): max size = " + maxBytes );
+            } else {
+                _instance.donkyLogging.debugLog("ContentNotification size ok (" + length + "): max size = " + maxBytes );
+            }
+        }
+
+        return valid;
+    }
+
+
+    /** 
      * Translates the supplied ContentNotifications into SENDCONTENT ClientNotifications and queues them.
      * @param {(ContentNotification|ContentNotification[])} notifications
+     * @returns {Object} 
      */
     DonkyCore.prototype.queueContentNotifications = function(notifications) {
-        try{
+        try {
+
             var customNotifications = [];
+            var invalidNotifications = [];
 
             if (_instance._isArray(notifications)) {
                 _instance._each(notifications, function(index, notification) {
-                    customNotifications.push({
-                        type: "SendContent",
-                        definition: notification
-                    });
+                    if (isSendContentNotificationValid(notification)) {
+                        customNotifications.push({
+                            type: "SendContent",
+                            definition: notification
+                        });
+                    } else {
+                        invalidNotifications.push({
+                            type: "SendContent",
+                            definition: notification
+                        });
+                    }
                 });
             } else {
-                customNotifications.push({
-                    type: "SendContent",
-                    definition: notifications
-                });
+                if (isSendContentNotificationValid(notifications)) {
+                    customNotifications.push({
+                        type: "SendContent",
+                        definition: notifications
+                    });
+                } else {
+                    invalidNotifications.push({
+                        type: "SendContent",
+                        definition: notifications
+                    });
+                }
             }
 
-            _instance.queueClientNotifications(customNotifications);
-		}catch(e){
+            if (customNotifications.length > 0) {
+                _instance.queueClientNotifications(customNotifications);
+            }
+
+            if (invalidNotifications.length > 0 ) {
+                return { 
+                    succeeded: false, 
+                    failedClientNotifications: invalidNotifications,
+                    reason: "The following notifications are too large and have not been processsed",
+                };
+            } else {
+                return{ succeeded: true };
+            }
+
+        }catch(e){
 			_instance.donkyLogging.errorLog("caught exception in queueCustomNotifications() : " + e );
 		}
     }
@@ -387,9 +465,42 @@ var DonkyCore = (function() {
  * @param {Callback} resultHandler - The callback to invoke when the notifications has been sent. (optional).
  */    
     DonkyCore.prototype.sendContentNotifications = function(notifications, resultHandler) {
-        try{
-            _instance.queueContentNotifications(notifications);
-            _instance.donkyNetwork.synchronise(resultHandler);
+        try {
+
+            var queueResult = _instance.queueContentNotifications(notifications);
+
+            if (!queueResult.succeeded) {
+                _instance.donkyLogging.debugLog(queueResult.failedClientNotifications.length + " invalid content notification(s)");
+            }
+            
+            _instance.donkyNetwork.synchronise(function(syncResult) {
+
+                if (_instance._isFunction(resultHandler)) {
+                    if (!queueResult.succeeded) {
+
+                        syncResult.succeeded = false;
+
+                        _instance._each(queueResult.failedClientNotifications, function(index, notification) {
+                            syncResult.response.failedClientNotifications.push({
+                                "notification": {
+                                    "type": "SendContent"
+                                },
+                                "validationFailures": [
+                                    {
+                                        "property": "data",
+                                        "details": "The data is too large ",
+                                        "failureCode": 12004,
+                                        "failureKey": "CustomDataTooLong",
+                                        "notification": notification
+                                    }
+                                ],
+                                "failureReason": "ValidationFailure"
+                            });                
+                        });
+                    }
+                    resultHandler(syncResult);
+                }
+            });
 		}catch(e){
 			_instance.donkyLogging.errorLog("caught exception in sendContentNotifications() : " + e );
 		}
@@ -566,9 +677,6 @@ var DonkyCore = (function() {
        
         if (settings.userDetails !== undefined || 
             settings.deviceDetails !== undefined ) {
-
-            // TODO: can move this somewhere else
-            _instance._updateClientInfoIfChanged();
 
             // what needs updating ?
             var regDetailsToUpdate = {};
@@ -1141,7 +1249,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.0.0.0";
+        return "2.0.0.1";
     }
 
     return DonkyCore;

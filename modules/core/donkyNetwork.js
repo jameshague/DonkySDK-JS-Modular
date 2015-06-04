@@ -14,7 +14,9 @@ var DonkyNetwork = (function() {
 
     /** Some defaults (will get overriden with server config - just there as a fallback) */
     var defaults = {
-        checkSynchroniseInterval: 1000,
+        // How often to check when we last succesfully synchronised
+        checkSynchroniseInterval: 1000 * 10,
+        // how long should we go without a sync
         maxSecondsWithoutSynchronize: 5*60,
         retrySchedule : [5000,5000,30000,30000,60000,120000,300000,300000,300000,300000,300000,300000,300000,300000,300000,600000,600000,600000,600000,600000,600000,900000],
     };
@@ -33,6 +35,16 @@ var DonkyNetwork = (function() {
         anonymous: "client-api.mobiledonky.com/api/",
         secure: "client-secure-api-northeurope.mobiledonky.com/api/"
     };
+
+/*  THese are the states signalr exposes
+    signalR.connectionState = {
+        connecting: 0,
+        connected: 1,
+        reconnecting: 2,
+        disconnected: 4
+    };
+*/
+
 
     /** Enum for signalR statuses. */
     var signalrStatuses = {
@@ -90,12 +102,15 @@ var DonkyNetwork = (function() {
     /** Variable representing whethr to use signalR. can be set with internal function _useSignalr() - only used for unit testing rest api fallback */
     var useSignalr = true;
 
+    // handle returned from setInterval for checking sync status
+    var checkSynchroniseInterval = null;
+
 /**
  *  Private function to implement maxSecondsWithoutSynchronize. This is called periodically on a timer.
  */    
     function _checkSynchronise() {
 
-        if (!donkyCore.donkyAccount._isSuspended()) {
+        if (donkyCore.donkyAccount.isRegistered() && !donkyCore.donkyAccount._isSuspended()) {
             var lastSynchroniseMs = donkyCore.donkyData.get("lastSynchroniseTime");
 
             if (lastSynchroniseMs !== null) {
@@ -106,6 +121,8 @@ var DonkyNetwork = (function() {
                 if (diff.seconds > defaults.maxSecondsWithoutSynchronize) {
                     _instance.synchronise();
                 }
+            } else {
+                _instance.synchronise();
             }
         }
     }
@@ -134,8 +151,8 @@ var DonkyNetwork = (function() {
             throw new Error("jQuery not found");
         }
 
-        if (donkyCore._versionCompare($.fn.jquery, "1.6.4") < 0) {
-            throw new Error("jQuery varsion too old - require minimum version of 1.6.4");
+        if (donkyCore._versionCompare($.fn.jquery, "1.7") < 0) {
+            throw new Error("jQuery varsion too old - require minimum version of 1.7");
         }
 
         if (window.$.signalR === undefined) {
@@ -148,9 +165,6 @@ var DonkyNetwork = (function() {
 
         // Keep a closured reference to the _instance
         _instance = this;
-
-        /** Start the maxSecondsWithoutSynchronize checker ...*/
-        setInterval( function(){ _checkSynchronise(); }, defaults.checkSynchroniseInterval );
 
         if (useSignalr) {
 
@@ -173,6 +187,11 @@ var DonkyNetwork = (function() {
                     _instance._initSignalR();            
                 }else if (signalrState == signalrStatuses.stopped) {
                     _instance._startSignalR();  
+                }
+
+                if (checkSynchroniseInterval === null) {
+                    /** Start the maxSecondsWithoutSynchronize checker ...*/
+                    checkSynchroniseInterval = setInterval( function(){ _checkSynchronise(); }, defaults.checkSynchroniseInterval );                
                 }
             });
         }
@@ -202,7 +221,7 @@ var DonkyNetwork = (function() {
 
             // Get MaxMinutesWithoutNotificationExchange out of config ...
             if (useSignalr && typeof configuration.configurationItems.MaxMinutesWithoutNotificationExchange == "string") {
-                defaults.maxSecondsWithoutSynchronize = parseInt(configuration.configurationItems.MaxMinutesWithoutNotificationExchange) * 60;
+               defaults.maxSecondsWithoutSynchronize = parseInt(configuration.configurationItems.MaxMinutesWithoutNotificationExchange) * 60;
             }
         }
 
@@ -223,35 +242,62 @@ var DonkyNetwork = (function() {
         try {
             _instance._ajax(request, type, api, method, function(rslt) {
 
-                if (!rslt.succeeded &&
-                    // Don't retry Bad request as this menas bad data passed
-                    rslt.statusCode !== 400 &&
-                    // Don't retry Not Authorized either ...                
-                    rslt.statusCode !== 401 &&
-                    // Don't retry Forbidden (user has been suspended)...                
-                    rslt.statusCode !== 403 &&
-                     // Don't retry Not Found either as this means something in REST land ...                
-                    rslt.statusCode !== 404 &&
-                    // Suspended user calling a secure REST method fails on preflight and don't necessarily get a status code 
-                    !donkyCore.donkyAccount._isSuspended() &&
-                    // Ensure we have a registered user to prevent churn ...
-                    donkyCore.donkyAccount.isRegistered()) {
-
-                    donkyCore.donkyLogging.debugLog("Retrying ajax call in " + defaults.retrySchedule[retryCounter] + " ms - retryCounter = " + retryCounter);
-
-                    setTimeout(function() {
-                        _instance.ajax(request, type, api, method, callback);
-
-                    }, defaults.retrySchedule[retryCounter]);
-
-                    if (retryCounter < defaults.retrySchedule.length - 1) {
-                        retryCounter++;
-                    }
+                if (rslt.succeeded) {
+                    retryCounter = 0;
+                    callback(rslt);                
                 } else {
-                    if (rslt.succeeded) {
-                        retryCounter = 0;
+                    var retry = true;
+
+                    // Ensure we have a registered user ...
+                    // if user has been suspended or they are not registered, don't retry
+                    if (donkyCore.donkyAccount._isSuspended() || !donkyCore.donkyAccount.isRegistered()) {
+                        retry = false;
+                    } else {
+                        switch (rslt.statusCode) {
+                           // Don't retry Not Authorized either ...                
+                            case 401:
+                                // A 401 indicates that the token is invalid if the method is NOT "authentication/gettoken".
+                                if (method !== "authentication/gettoken") {
+                                    retry = false;
+                                    // need to refresh the token and retry
+                                    donkyCore.donkyAccount._refreshToken(function(getTokenRslt) {
+                                        if (getTokenRslt.succeeded) {
+                                            donkyCore.donkyLogging.debugLog("Retrying ajax call after getting a new token");
+                                            _instance.ajax(request, type, api, method, callback);
+                                        }
+                                    });
+
+                                } else {
+                                    // handled by the caller
+                                    retry = false;
+                                }
+                                break;
+                            // Don't retry Bad request as this means bad data passed
+                            case 400:                            
+                            // Don't retry Forbidden (user has been suspended)...                
+                            case 403:
+                            // Don't retry Not Found either as this means something in REST land ...                
+                            case 404:
+                                retry = false;
+                            default:
+                                break;
+                        }                    
                     }
-                    callback(rslt);
+
+                    if (retry) {
+                        donkyCore.donkyLogging.debugLog("Retrying ajax call in " + defaults.retrySchedule[retryCounter] + " ms - retryCounter = " + retryCounter);
+
+                        setTimeout(function() {
+                            _instance.ajax(request, type, api, method, callback);
+
+                        }, defaults.retrySchedule[retryCounter]);
+
+                        if (retryCounter < defaults.retrySchedule.length - 1) {
+                            retryCounter++;
+                        }
+                    } else {
+                        callback(rslt);
+                    }
                 }
             });
         } catch (e) {
@@ -272,7 +318,7 @@ var DonkyNetwork = (function() {
      */
     DonkyNetwork.prototype._ajax = function(request, type, api, method, callback) {
 
-        var headers = {};
+        var headers = { donkyClientSystemIdentifier: "DonkyWebModularSdk" };
 
         if (api === _instance.api.secure) {
             headers.authorization = donkyCore.donkyNetwork._getAuthorizationHeader();
@@ -295,7 +341,7 @@ var DonkyNetwork = (function() {
                 },
                 contentType: "application/json",
                 data: request !== null ? JSON.stringify(request) : undefined,
-                dataType: "json",
+                dataType: "json"
             })
             .done(function(data) {
                 if (data !== null && 
@@ -305,7 +351,7 @@ var DonkyNetwork = (function() {
                 
                 callback({ succeeded: true, response: data });
             })
-            .fail(function(jqXHR, status) {
+            .fail(function(jqXHR, status, errorThrown) {
 
                 // request finished and response is ready 
                 if (jqXHR.readyState == 4) {
@@ -360,6 +406,27 @@ var DonkyNetwork = (function() {
             if (donkyCore.donkyLogging._getLogLevel() >= donkyCore.donkyLogging.logLevel.Info ) {
                 signalrConnection.logging = true;            
             }
+
+            signalrConnection.stateChanged(function (change) {
+                switch (change.newState) {
+                    case $.signalR.connectionState.connecting:
+                        donkyCore.donkyLogging.debugLog('The server is connecting');
+                        signalrState = signalrStatuses.starting;
+                        break;
+                    case $.signalR.connectionState.connected:
+                        donkyCore.donkyLogging.debugLog('The server is connected');
+                        signalrState = signalrStatuses.started;
+                        break;
+                    case $.signalR.connectionState.reconnecting:
+                        donkyCore.donkyLogging.debugLog('The server is reconnecting');
+                        signalrState = signalrStatuses.starting;
+                        break;
+                    case $.signalR.connectionState.disconnected:
+                        donkyCore.donkyLogging.debugLog('The server is disconnected');
+                        signalrState = signalrStatuses.stopped;
+                        break;
+                }
+            });
 
 			signalrHubProxy = signalrConnection.createHubProxy("NetworkHub");
 
@@ -431,13 +498,16 @@ var DonkyNetwork = (function() {
 		                signalrConnection.start()
 		                    .done(function() {
                                 signalrState = signalrStatuses.started;
-		                        donkyCore.publishLocalEvent({ type : "SignalRStarted", data: {} });
+                                // Moved till we return from the synchronize call
+		                        // donkyCore.publishLocalEvent({ type : "SignalRStarted", data: {} });
 
 		                        if (donkyCore._isFunction(callback)) {
 		                            callback();
 		                        }
 
                                 _instance._synchroniseOverSignalR(function() {
+
+                                    donkyCore.publishLocalEvent({ type : "SignalRStarted", data: {} });
                                     // Did somenoe call synchronize whilst we were coming up and supply a callback ?
                                     // if so call it now
                                     if (syncWhenStartingCallback !== undefined) {
@@ -600,10 +670,11 @@ var DonkyNetwork = (function() {
 
             synchronizing = true;
 
+            donkyCore._processPendingClientNotifications(args);
+
             signalrHubProxy.invoke("synchronise", args)
                 .done(function(exchange_response) {
 
-                    donkyCore.donkyData.set("lastSynchroniseTime", new Date().valueOf());
                     synchronizing = false;
 
                     donkyCore.donkyLogging.infoLog("Call to synchronise succeeded, result was: " + JSON.stringify(exchange_response));
@@ -612,7 +683,6 @@ var DonkyNetwork = (function() {
                     // Not really as we want to see if there are any client notifications to send at the end - unless that is moved outside too
                     // Procees any server notifications. They will be farmed out to different modules.
                     donkyCore._processServerNotifications(exchange_response.serverNotifications);
-                    donkyCore._processSentClientNotifications(args);
 
                     if (donkyCore._isArray(exchange_response.failedClientNotifications) && exchange_response.failedClientNotifications.length > 0) {
                         donkyCore.donkyLogging.warnLog("Exchange returnewd some failed client notifications: " + JSON.stringify(exchange_response.failedClientNotifications));
@@ -625,7 +695,7 @@ var DonkyNetwork = (function() {
                         _instance._synchroniseOverSignalR(callback);
                     } else {
                         if (donkyCore._isFunction(callback)) {
-                            callback();
+                            callback({ succeeded: true, response: exchange_response});
                         }
                     }
                 })
@@ -637,7 +707,7 @@ var DonkyNetwork = (function() {
                     donkyCore.donkyLogging.errorLog("Call to synchronise failed: " + error);
 
                     if (donkyCore._isFunction(callback)) {
-                        callback();
+                        callback({ succeeded: false });
                     }
                 });
         } else {
@@ -664,6 +734,9 @@ var DonkyNetwork = (function() {
         };
 
         synchronizing = true;
+
+        donkyCore._processPendingClientNotifications(synchronizeRequest.clientNotifications);
+
         this.ajax(
             synchronizeRequest, 
             "POST", 
@@ -671,14 +744,12 @@ var DonkyNetwork = (function() {
             "notification/synchronise",
             function(result) {
                 
-                donkyCore.donkyData.set("lastSynchroniseTime", new Date().valueOf());
                 synchronizing = false;
 
                 if (result.succeeded) {
                     donkyCore.donkyLogging.debugLog("Call to synchronise succeeded, result was: " + JSON.stringify(result));
 
                     donkyCore._processServerNotifications(result.response.serverNotifications);
-                    donkyCore._processSentClientNotifications(synchronizeRequest.clientNotifications);
 
                     if (donkyCore._isArray(result.response.failedClientNotifications) && result.response.failedClientNotifications.length > 0) {
                         donkyCore.donkyLogging.warnLog("Exchange returnewd some failed client notifications: " + JSON.stringify(result.response.failedClientNotifications));
@@ -690,14 +761,14 @@ var DonkyNetwork = (function() {
                         _instance._synchronizeOverREST(callback);
                     } else {
                         if (donkyCore._isFunction(callback)) {
-                            callback();
+                            callback(result);
                         }
                     }
                 } else {
                     synchronizing = false;
                     donkyCore.donkyLogging.errorLog("Call to synchronise failed, result was: " + JSON.stringify(result));
                     if (donkyCore._isFunction(callback)) {
-                        callback();
+                        callback(result);
                     }
                 }
             });
@@ -710,7 +781,14 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype.synchronise  = function(callback) {
         try{
-     	    if (useSignalr) {
+            // setting this before we actually sync as we dont want to endup in a tight loop if there is an issue
+            donkyCore.donkyData.set("lastSynchroniseTime", new Date().valueOf());
+
+            var configuration = donkyCore.donkyData.get("configuration");
+            var maxSignalRBytes = parseInt( configuration.configurationItems.SignalRMaxMessageSizeBytes );
+            var len = donkyCore._getPendingNotificationsLength();
+            // check message size and if > maxSignalRBytes send over rest ...
+     	    if (len < maxSignalRBytes && useSignalr) {
 
 	             if (signalrState == signalrStatuses.initializing || 
                      signalrState == signalrStatuses.starting) {

@@ -163,17 +163,24 @@
 			 */			
             isExpired: function(message) {
                 var expired = false;
-                var sent = new Date(message.sentTimestamp); 
-                var now = new Date();
 
-                var diff = donkyCore._dateDiff(sent, now);
+                // If message has an expiryTimestamp but no expiredBody we need to use this as expiry rather than richMessageAvailabilityDays
+                if (donkyMessagingCommon.isExpired(message.expiryTimestamp) && message.expiredBody === null) {
+                    expired = true;
+                } else {
+                    var sent = new Date(message.sentTimestamp); 
+                    var now = new Date();
 
-                if (diff !== NaN) {
+                    var diff = donkyCore._dateDiff(sent, now);
 
-                    if (diff.days > defaults.richMessageAvailabilityDays) {
-                        expired = true;
+                    if (diff !== NaN) {
+
+                        if (diff.days > defaults.richMessageAvailabilityDays) {
+                            expired = true;
+                        }
                     }
                 }
+
                 return expired;
             },
 			/**
@@ -251,7 +258,7 @@
                     notificationType: "RichMessage",             
                     handler: processRichMessage
                 },
-                true);
+                false);
 
 		}
 

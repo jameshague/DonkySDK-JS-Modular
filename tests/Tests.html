@@ -29,8 +29,8 @@
   
 <script>
 
-    var apikey1 = ">>Enter Key 1<<";
-    var apikey2 = ">>Enter Key 2<<";
+    var apikey1 = ">>>ENTER API KEY<<<";
+    var apikey2 = ">>>ENTER API KEY<<<";
 
 
     var defaultUserDetails = {
@@ -440,10 +440,10 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
             var url = donkyCore.formatAssetUrl("myId");
-            assert.equal( url, "https://dev-client-api.mobiledonky.com/asset/myId", "Expect value to be \"https://dev-client-api.mobiledonky.com/asset/myId\"" );
+            assert.equal( url, "https://client-api.mobiledonky.com/asset/myId", "Expect value to be \"https://client-api.mobiledonky.com/asset/myId\"" );
 
             url = donkyCore.formatAssetDownloadUrl("myId","myName");
-            assert.equal( url, "https://dev-client-api.mobiledonky.com/download/myId/myName", "Expect value to be \"https://dev-client-api.mobiledonky.com/download/myId/myName\"" );
+            assert.equal( url, "https://client-api.mobiledonky.com/download/myId/myName", "Expect value to be \"https://client-api.mobiledonky.com/download/myId/myName\"" );
 
             done();            
         });
@@ -631,7 +631,7 @@
     QUnit.test("test _refreshToken with a mocked user suspension", function(assert) {
 
         $.mockjax({
-            url: "https://dev-client-api.mobiledonky.com/api/authentication/gettoken",
+            url: "https://client-api.mobiledonky.com/api/authentication/gettoken",
             status: 403,
             responseText: null
         });
@@ -721,7 +721,7 @@
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
 
             $.mockjax({
-                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
+                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration/user",
                 responseText: null
             });
 
@@ -770,7 +770,7 @@
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
                 
             $.mockjax({
-                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/device",
+                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration/device",
                 responseText: null
             });
 
@@ -855,7 +855,7 @@
             };
                 
             $.mockjax({
-                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration",
+                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration",
                 responseText: null
             });
 
@@ -1234,10 +1234,14 @@
                 assert.equal( notification.definition.content.data.newColour, "#CDE", "Expect type to be same" );
                 assert.equal( notification.definition.content.data.intervalSeconds, 10, "Expect type to be same" );
                 donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "SendContent", handler: SendContentHandler}]);
-                // leave in a good state for next test
-                donkyCore.donkyNetwork._stopSignalR(function(){
-                    done();  
-                });                     
+                
+                setTimeout(function() {
+                    // leave in a good state for next test
+                    donkyCore.donkyNetwork._stopSignalR(function(){
+                        done();  
+                    });   
+                }, 2000);
+                  
             }
             
             donkyCore.subscribeToOutboundNotifications(module, { notificationType: "SendContent", handler: SendContentHandler });
@@ -1429,7 +1433,7 @@
     QUnit.test("Log level test", function(assert) {
         
         $.mockjax({
-            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
         
@@ -1458,7 +1462,7 @@
     QUnit.test("Log level test 2", function(assert) {
 
         $.mockjax({
-            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
 
@@ -1484,7 +1488,7 @@
     QUnit.test("Log level test 3", function(assert) {
 
         $.mockjax({
-            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
 
@@ -1518,7 +1522,7 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
             $.mockjax({
-                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: true}
             });
 
@@ -1540,7 +1544,7 @@
     */
     QUnit.test("submitLog Integration test", function(assert) {
         $.mockjax({
-            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
         
@@ -1575,7 +1579,7 @@
 
             // Mock ajax call returning alwaysSubmitErrors  = false
             $.mockjax({
-                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: false}
             });
 
@@ -1656,6 +1660,57 @@
             done(); 
         });
     });
+    
+    QUnit.module( "Tags tests" );
+
+    // THis test assumes you have configured 3 tags for app space pointed to by apikey1:
+    // tag1, tag2, tag3
+    QUnit.test("test tags API", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+			donkyCore.donkyAccount.getTags(function(getResult1){
+				assert.equal( getResult1.succeeded, true, "call succeeded" );
+				
+				assert.equal( $.isArray(getResult1.response),  true, "array returned" );			
+				
+				var tagInfo = [
+					{
+						value: "tag1",
+						isSelected: false
+					},
+					{
+						value: "tag2",
+						isSelected: true
+					},
+					{
+						value: "tag3",
+						isSelected: false
+					}
+				];
+				
+				donkyCore.donkyAccount.putTags(tagInfo, function(putResult){
+				
+					assert.equal( putResult.succeeded, true, "call succeeded" );
+				
+					donkyCore.donkyAccount.getTags(function(getResult2){
+						assert.equal( getResult2.succeeded, true, "call succeeded" );
+						
+						assert.equal(getResult2.response[1].isSelected, true, "tag2 selected" );
+						
+						done(); 
+					});
+				
+					
+				})
+			
+			});
+
+        });
+    });
+    
+    
 
 </script>
   

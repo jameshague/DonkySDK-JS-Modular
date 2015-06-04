@@ -55,7 +55,7 @@
             iframeId: "donkyRichPopupIframe",
             // Boolean to determine whether donkyRichPopupUI should delete the rich message when close button is pressed
             // This is to allow richPopupUI and richInboxUI to cooperate if both in use.    
-            deleteOnClose: true
+            deleteOnClose: true            
         };
 
 		/**
@@ -169,7 +169,7 @@
                 }
 
                 var model = {
-                    AvatarUrl: message.avatarAssetId != null ? donkyCore.formatAssetUrl(message.avatarAssetId) : "",
+                    AvatarUrl: (message.avatarAssetId != null && message.avatarAssetId != "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : "",
                     MessageId: message.messageId,
                     SenderDisplayName: message.senderDisplayName,
                     Body: !donkyMessagingCommon.isExpired(message.expiryTimestamp) ? message.body : message.expiredBody,
@@ -200,7 +200,12 @@
 		 * @name DonkyRichPopupUI
 		 */
 		function DonkyRichPopupUI() {
+            var module = {  
+                name: "DonkyRichPopupUI", 
+                version:"2.0.0.0" 
+            };
 
+            donkyCore.registerModule(module);
 		}
 
 	    DonkyRichPopupUI.prototype = {
@@ -210,6 +215,7 @@
              * @param {Object} settings - intergrators settings to optionally overide any of the defaults
              */
             initialise: function(options) {
+
                 donkyCore._extend(defaults, options);
 
                 donkyUICommon.loadCss(defaults.iframeCssUrl);

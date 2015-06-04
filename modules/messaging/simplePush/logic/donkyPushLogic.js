@@ -200,7 +200,7 @@
                     notificationType: "SimplePushMessage",             
                     handler: processPush
                 },
-                true);
+                false);
 		}
 
 		DonkyPushLogic.prototype = {
@@ -221,8 +221,9 @@
 	        },
 
 	        /**
-	         *  Get the next simple push message
-             *  
+	         *  Queue the client notification "InteractionResult" based on which button has been pressed
+             *  @param {String} id - The message id
+             *  @param {String} buttonText - The button text 
 	         */
             setSimplePushResult : function(id, buttonText) {
 
@@ -258,7 +259,7 @@
                                 buttonDescription = webButtonSet.buttonSetActions[0].label;
                                 break;
                             case "TwoButton":
-                                buttonDescription = webButtonSet.buttonSetActions[0].Label + "|" + webButtonSet.buttonSetActions[1].label;
+                                buttonDescription = webButtonSet.buttonSetActions[0].label + "|" + webButtonSet.buttonSetActions[1].label;
                                 if (buttonText == webButtonSet.buttonSetActions[1].label) {
                                     userAction = "Button2";
                                 }
