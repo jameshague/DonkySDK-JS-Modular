@@ -9,11 +9,17 @@ body{
 
 #DonkyNotification{
 	background-color:#fff;
-	font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
 	padding: 15px;
-	-webkit-box-shadow: 0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	-moz-box-shadow:    0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	box-shadow:         0px 0px 7px 0px rgba(50, 50, 50, 0.40);	
+	margin: 0;	
+	border: #ccc 1px solid;
+  	border-right: none;			
+}
+
+@media (max-width: 400px) {
+	#DonkyNotification{
+		border: none;
+	  	border-bottom: #ccc 1px solid;			
+	}
 }
 
 .forMobile{
@@ -26,16 +32,21 @@ body{
 
 .badge{
 	position: absolute;
-	font-size: 15px;
-	border-radius: 15px;
-	background-color: #652f8e;
-	padding: 6px;
+	top: 0;
+	left: 9px;
+	font-size: 10px;
+	background-color: #26a7df;
+	padding: 3px 5px;
 	z-index: 1000;
 	border: 2px solid #fff;
-	-webkit-box-shadow: 0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	-moz-box-shadow:    0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	box-shadow:         0px 0px 7px 0px rgba(50, 50, 50, 0.40);
 }
+
+@media (max-width: 400px) {
+	.badge{
+		left: 3px;			
+	}
+}
+
 
 .container{
     position: relative;	
@@ -44,22 +55,38 @@ body{
 .bannerClose {
 	float: right;
 	cursor: pointer;
-	font-size: 15px;
+	font-size: 12px;
 	position: absolute;
 	z-index: 1000;
 	right: 0;
 }
 
 .avatar img{
-    border: 1px solid #555;
+    border: 1px solid #CCC;
+		width:96px;
+		height:96px;
 }	   
-                     
+
+@media (max-width: 400px) {
+	.avatar img{
+		width:70px;
+		height:70px;
+	}	   
+}
+			   			         
 .content h3{
-    color: #652f8e;
-    font-size: 20px;
+	text-transform: uppercase;
+    color: #26a7df;
+    font-size: 16px;
     font-weight: bold;
     margin: 0 0 10px 0;
 }	                        
+
+.content h3 em{
+    color: black;
+	font-style: normal;
+}	                        
+
 
 p{
     font-weight: 300;
@@ -74,7 +101,7 @@ hr{
     margin: 5px 0 15px 0;
 }                            
 
-a.bannerAction, a.bannerDismiss{
+a.donkyBannerButton{
     background-color:#f6f6f6;
 	border: 2px solid #A7A9AC;
 	border-radius: 0;
@@ -87,9 +114,6 @@ a.bannerAction, a.bannerDismiss{
 	-moz-transition: all 0.2s ease-in;
 }                            
 
-.glyphicon-remove{
-	color: #666;
-}
 
 .glyphicon-remove:hover{
 	color: #ccc;

@@ -5,10 +5,6 @@
  *
  */
 
-/**
- * DonkyLogging module - allows Donky REST API interaction and SignalR connection
- * @namespace DonkyLogging
- */
 var DonkyNetwork = (function() {
     "use strict";
 
@@ -18,7 +14,7 @@ var DonkyNetwork = (function() {
         checkSynchroniseInterval: 1000 * 10,
         // how long should we go without a sync
         maxSecondsWithoutSynchronize: 5*60,
-        retrySchedule : [5000,5000,30000,30000,60000,120000,300000,300000,300000,300000,300000,300000,300000,300000,300000,600000,600000,600000,600000,600000,600000,900000],
+        retrySchedule : [5000,5000,30000,30000,60000,120000,300000,300000,300000,300000,300000,300000,300000,300000,300000,600000,600000,600000,600000,600000,600000,900000]
     };
 
     /** Our "private" instance */
@@ -30,22 +26,6 @@ var DonkyNetwork = (function() {
     /** Retry counter used for retrying some failed REST API calls. used in conjunction with above  retrySchedule. */
     var retryCounter = 0;
 
-    /** Base URL's for secure and anonymous REST API's - methods get appended.*/
-    DonkyNetwork.prototype.api = {
-        anonymous: "client-api.mobiledonky.com/api/",
-        secure: "client-secure-api-northeurope.mobiledonky.com/api/"
-    };
-
-/*  THese are the states signalr exposes
-    signalR.connectionState = {
-        connecting: 0,
-        connected: 1,
-        reconnecting: 2,
-        disconnected: 4
-    };
-*/
-
-
     /** Enum for signalR statuses. */
     var signalrStatuses = {
         initializing: 0, 
@@ -56,20 +36,13 @@ var DonkyNetwork = (function() {
         error: 5
     };
 
-    /**
-     *  Enum for signalR statuses
-     *  @readonly
-     *  @enum {number}
-     */    
-    DonkyNetwork.prototype.signalrStatuses = signalrStatuses;
-
     /** Private variable internally set to true if someone calls _stopSignalR() when in a starting state. 
      *  When we enter the started state _stopSignalR() is called and this variable is reset to false.
      */
     var stopRequest = false;   
 
     /** Optional callback used in conjunction with stopRequest. */
-    var stopRequestCallback = undefined;
+    var stopRequestCallback;
 
     /** Private variable internally set to true if someone calls _startSignalR() when in a stopping state. 
      *  When we enter the stopped state _startSignalR() is called and this variable is reset to false.
@@ -77,12 +50,12 @@ var DonkyNetwork = (function() {
     var startRequest = false;   
     
     /** Optional callback used in conjunction with startRequest. */
-    var startRequestCallback = undefined;
+    var startRequestCallback;
     
     /** If integrator calls queue / synchronize BEFORE signalR has started (and supplied an optional callback) we wait until signalr is up as a sync is done on startup. 
      *  We call this AFTER we have done the initial notification exchange. This prevents the notifications going to the rest API and allows a callback to be used.
      */
-    var syncWhenStartingCallback = undefined;
+    var syncWhenStartingCallback;
 
     /** Variable representing whether signlR is initialised or not. */
     var signalrInitialised = false;
@@ -129,7 +102,7 @@ var DonkyNetwork = (function() {
 
 /**
  * Creates DonkyNetwork object.
- * @constructor
+ * @class DonkyNetwork
  */    
     function DonkyNetwork(options) {
 
@@ -228,10 +201,25 @@ var DonkyNetwork = (function() {
         return _instance;
     }
 
+/** 
+ * Base URL's for secure and anonymous REST API's - methods get appended.
+ */
+    DonkyNetwork.prototype.api = {
+        anonymous: "client-api.mobiledonky.com/api/",
+        secure: "client-secure-api-northeurope.mobiledonky.com/api/"
+    };
+
+/**
+ *  Enum for signalR statuses
+ *  @readonly
+ *  @enum {number}
+ */    
+    DonkyNetwork.prototype.signalrStatuses = signalrStatuses;
+
 
 /**
  *  Performs an ajax REST API call to Donky with retry schedule. Retries are not performed on any failure as below. 
- *  
+ *  @memberof DonkyNetwork
  *  @param {Object} request - The request object.
  *  @param {String} type - The domain name and path to the remote server (either the anonymous API or the secure API).
  *  @param {String} api - The api (anonymous or secure base URL).
@@ -279,6 +267,7 @@ var DonkyNetwork = (function() {
                             // Don't retry Not Found either as this means something in REST land ...                
                             case 404:
                                 retry = false;
+                                break;
                             default:
                                 break;
                         }                    
@@ -304,12 +293,11 @@ var DonkyNetwork = (function() {
             donkyCore.donkyLogging.errorLog("caught exception in ajax() : " + e );
             callback({ succeeded: false, statusCode: -1 });
         }
-    }
+    };
 
     /** 
      *  Private function that actually executes a REST call. Request headers are added as follows: 1) add apiKey header. 2) if secure API, add authorization header.
      *  Responses that have a 400 status code (bad request) are treated as a validation failure and the responseText is assumed to be an array of validation errors.
-     *
      *  @param {Object} request - The request object.
      *  @param {String} type - The domain name and path to the remote server (either the anonymous API or the secure API).
      *  @param {String} api - The api (anonymous or secure base URL).
@@ -352,10 +340,10 @@ var DonkyNetwork = (function() {
                 callback({ succeeded: true, response: data });
             })
             .fail(function(jqXHR, status, errorThrown) {
-
+                var msg;
                 // request finished and response is ready 
                 if (jqXHR.readyState == 4) {
-                    var msg;
+                    
                     var response = null;
                     var statusCode = jqXHR.statusCode();
                     switch (statusCode.status) {
@@ -374,6 +362,7 @@ var DonkyNetwork = (function() {
 
                         default:
                             {
+                                response = statusCode.responseText;
                                 msg = type + " to  " + api + method + " returned a " + statusCode.status + "\nrequest: " + JSON.stringify(request) + "\nheaders: " + JSON.stringify(headers) + "\nresponse: " + statusCode.responseText;
                                 donkyCore.donkyLogging.warnLog(msg);
                             }
@@ -388,14 +377,14 @@ var DonkyNetwork = (function() {
                     callback({ succeeded: false, statusCode: -1 });
                 }
             });
-    }
+    };
 
 /**
  *  Initializes SignalR. This is only ever performed once.
  */    
     DonkyNetwork.prototype._initSignalR = function() {
 
-        if(signalrConnection == null) {
+        if(signalrConnection === null) {
 
             signalrState = signalrStatuses.initializing;
             var accessDetails = donkyCore.donkyData.get("accessDetails");
@@ -451,7 +440,7 @@ var DonkyNetwork = (function() {
         }else{
             donkyCore.donkyLogging.warnLog("_signalR.init() called twice");
         }
-    }
+    };
 
 /**
  *  Returns whether SignalR is started.
@@ -459,7 +448,7 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype._isSignalRStarted = function() {
         return signalrState == signalrStatuses.started;
-    }
+    };
 
 /**
  *  Returns SignalR status.
@@ -467,7 +456,7 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype._getSignalRState = function() {
         return signalrState;
-    }
+    };
 
 /**
  *  Enable / disable signalr (internal function to enable testing sync over rest API).
@@ -475,7 +464,7 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype._useSignalR = function(use) {
         useSignalr = use;
-    }
+    };
 
 /**
  *  Starts SignalR.
@@ -483,7 +472,7 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype._startSignalR = function(callback) {
 
-		if (signalrConnection != null) {
+		if (signalrConnection !== null) {
 
             var accessDetails = donkyCore.donkyData.get("accessDetails");
 
@@ -588,14 +577,14 @@ var DonkyNetwork = (function() {
 		} else {
 		    donkyCore.donkyLogging.warnLog("_startSignalR() called when not initialized");
         }
-    }
+    };
 
 /**
  *  Stops SignalR.
  *  @param {Callback} method - The (optional) callback to execute upon completion.
  */    
     DonkyNetwork.prototype._stopSignalR = function(callback) {
-		if (signalrConnection != null) {
+		if (signalrConnection !== null) {
 
 		    switch (signalrState) {
 		        case signalrStatuses.started:
@@ -653,7 +642,7 @@ var DonkyNetwork = (function() {
 		} else {
             donkyCore.donkyLogging.warnLog("_stopSignalR() called when not initialized");
 		}
-    }
+    };
 
 /**
  * Synchronises over SignalR if pending client messages available.
@@ -713,7 +702,7 @@ var DonkyNetwork = (function() {
         } else {
             donkyCore.donkyLogging.warnLog("signalR not initialized so can't synchronise over this channel");
         }
-    }
+    };
 
 
 /**
@@ -772,11 +761,11 @@ var DonkyNetwork = (function() {
                     }
                 }
             });
-    }
+    };
 
 /**
  * Performs a notification sync.
- *
+ * @memberof DonkyNetwork
  * @param {Callback} callback - The callback to invoke when the syncronization is complete (optional).
  */    
     DonkyNetwork.prototype.synchronise  = function(callback) {
@@ -809,11 +798,11 @@ var DonkyNetwork = (function() {
 			donkyCore.donkyLogging.errorLog("caught exception in synchronise() : " + e );
             callback();
         }    
-    }
+    };
 
 /**
  * Gets a specific server notification from the network 
- *
+ * @memberof DonkyNetwork
  * @param {String} notificationId - The server notification id
  * @param {Callback} resultHandler - The callback to invoke with the notification when it has been retrieved.
  */    
@@ -840,7 +829,7 @@ var DonkyNetwork = (function() {
 			 donkyCore.donkyLogging.errorLog("caught exception in getServerNotification() : " + e );
             resultHandler(null); 
         }    
-    }
+    };
 
 /**
  *  Gets authorization header.
@@ -849,7 +838,7 @@ var DonkyNetwork = (function() {
     DonkyNetwork.prototype._getAuthorizationHeader = function() {
         var accessDetails = donkyCore.donkyData.get("accessDetails");
         return accessDetails !== null ? accessDetails.tokenType + " " + accessDetails.accessToken : "";
-    }
+    };
 
     // Return the constructor
     return DonkyNetwork;

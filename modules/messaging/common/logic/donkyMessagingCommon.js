@@ -22,13 +22,15 @@
 		//====================
 
 		/**
-		 * @class
-		 * @name DonkyMessagingCommon
+		 * @class DonkyMessagingCommon
 		 */
 		function DonkyMessagingCommon() {
 		    console.log("Constructing DonkyMessagingCommon");
 		}
 
+        /**
+         *  @memberof DonkyMessagingCommon 
+         */
 		DonkyMessagingCommon.prototype = {
 
             /**
@@ -53,7 +55,7 @@
                         serverNotificationId: notification.id,
                         result: "Delivered",
                         sentTime: notification.createdOn,
-                        type: notification.type,
+                        type: notification.type
                     }
                 };
 
@@ -65,7 +67,7 @@
              */
             markMessageRead: function(message) {
 
-                var diff = donkyCore._dateDiff(new Date(message.receevedTimestamp), new Date());
+                var diff = donkyCore._dateDiff(new Date(message.receivedTimestamp), new Date());
 
                 var clientNotification = {
                     type: "MessageRead",
@@ -81,6 +83,26 @@
 
                 donkyCore.queueClientNotifications(clientNotification);    
 
+            },
+            /**
+             * Function to create and queue a MessageShared client notification.
+             * @param {Object} message - the message
+             * @param {String} sharedTo - Where the message was shared to (Facebook / Twitter etc)
+             */
+            markMessageShared: function(message, sharedTo){
+                
+                var clientNotification = {
+                    type: "MessageShared",
+                    messageId: message.messageId,
+                    messageType: message.messageType,
+                    messageScope: message.messageScope,
+                    originalMessageSentTimestamp: message.sentTimestamp,
+                    sharedTo: sharedTo,
+                    sharedTimestamp: new Date().toISOString(),
+                    contextItems: message.contextItems
+                };
+
+                donkyCore.queueClientNotifications(clientNotification);                    
             },
             /**
              * Function to determine whether a timestamp has expired or not.

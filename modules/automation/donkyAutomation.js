@@ -22,13 +22,15 @@
 		//====================
 
 		/**
-		 * @class
-		 * @name DonkyAutomation
+		 * @class DonkyAutomation
 		 */
 		function DonkyAutomation() {
-            console.log("Constructing DonkyAutomation");
+            donkyCore.donkyLogging.infoLog("Constructing DonkyAutomation");
 		}
 
+        /**
+         *  @memberof DonkyAutomation 
+         */
 		DonkyAutomation.prototype = {
             /**
              *  Execute Third Party Triger.
@@ -61,7 +63,7 @@
             return factory(donkyCore);
         });
 	}  else {		
-		window['donkyAutomation'] = factory(window.donkyCore);
+		window.donkyAutomation = factory(window.donkyCore);
 	}
 
 }());

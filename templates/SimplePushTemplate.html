@@ -1,14 +1,15 @@
 ﻿<div id="DonkyNotification" class="{{ResponsiveStyle}}">
-  <span class="badge">{{UnreadCount}}</span>
+  
     <div class='container'>
         <div class='row'>
             {{{CloseButton}}}
             <div class="col-xs-3 avatar">
-                <img class="img-circle" src="{{AvatarUrl}}" width="80" height="80"/>
+                <span class="badge">{{UnreadCount}}</span>
+                <img class="img-circle" src="{{AvatarUrl}}" />
             </div>
             <div class="col-xs-9 content">
-                <h3>{{SenderDisplayName}}</h3>
-                <p>{{Body}}</p>
+                <h3>{{{SenderDisplayName}}}</h3>
+                <p>{{{Body}}}</p>
             </div>
         </div>
     </div>

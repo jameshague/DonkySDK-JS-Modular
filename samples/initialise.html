@@ -1,37 +1,58 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title> initialise</title>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Initialise</title>
     <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
-    <script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
     <script src="../modules/require-config-debug.js"></script>
 </head>
 <body>
+    <!-- div to insert logging int -->
     <div id="logPanel"></div>
 
-    <script>
-        var $logPanel=$("#logPanel");
+    <script type="text/javascript">
+        
+    $(function() {
+      // Handler for .ready() called.
+    
+        // create jQuery object for logPanel and cache it 
+        var $logPanel = $("#logPanel");
+        // function to perform logging
         function log(message) {
-            $logPanel.append("<div>"+message+"</div>");
+            $logPanel.append("<pre>"+message+"</pre>");
         }
-
-        require(['donkyCore'],function(donkyCore) {
-
+    
+        // Require the  donkyCore and donkyCoreAnalytics interfaces
+        // donkyCoreAnalytics just needs to be created, you dont need to interact with it
+        require(['donkyCore', 'donkyCoreAnalytics'],function(donkyCore, donkyCoreAnalytics) {
+    
+            // Call initialize - we are performing an anoymous registrtaion in this sample as there are no user details supplied
             donkyCore.initialise({
-                apiKey: ">>Enter API Key <<",
+                
+                // API Key - get this from DonkyControl
+                apiKey: ">>ENTER API KEY HERE<<",
+                // Callback handler to process the result
                 resultHandler: function(result) {
-
-                    log("<code>"+JSON.stringify(result)+"</code>");
-
+                                        
                     if(result.succeeded) {
+                        // Success - log out the result object
+                        log(JSON.stringify(result));
+                        // get registration details of the user we just created
                         var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
-                        log("<code>"+JSON.stringify(registrationDetails)+"</code>");
-                    }
+                        // log out the registration details
+                        log(JSON.stringify(registrationDetails));
+                    }else{
+                        // Failure - log out the result object as it will contain an error message
+                        log(JSON.stringify(result));
+    				}
                 }
             });
         });
+    });        
+                
     </script>
 </body>
 </html>

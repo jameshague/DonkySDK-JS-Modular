@@ -5,15 +5,17 @@
  *
  */
 
-/**
- * DonkyCore module.
- * @namespace DonkyCore
- */
 var DonkyCore = (function() {
-
+    "use strict";
     // Our "private" instance
     var _instance;
-
+    
+    // This is thr root location of the donky JS installation. Other modules that need to reference resources
+    // will use this property to resolve any paths. 
+    var installDir = "../";
+    
+    // var installDir = "https://cdn.dnky.co/sdk/latest-modular/";
+     
     // array of subscribers to Donky notifications
     var donkyNotificationSubscribers = [];
 
@@ -29,90 +31,9 @@ var DonkyCore = (function() {
     // private object to store the service instances
     var registeredServices = {};
 
-    /** 
-     * Internal function to perform equivalent to jQuery.extend
-     * @param {obj} the object to test
-     * @returns {Object} - The extended object
-     */
-    DonkyCore.prototype._extend = function (){
-        for(var i=1; i<arguments.length; i++)
-            for(var key in arguments[i])
-                if(arguments[i].hasOwnProperty(key))
-                    arguments[0][key] = arguments[i][key];
-        return arguments[0];
-    }
-
-    /** 
-     * Internal function to determine whether argument is a function
-     * @param {obj} the object to test
-     * @returns {Boolean} - True if a function
-     */
-    DonkyCore.prototype._isFunction = function(obj) {
-        var getType = {};
-        return obj && getType.toString.call(obj) === '[object Function]';
-    };
-
-    /** 
-     * Internal function to determine whether argument is an array
-     * @param {obj} the object to test
-     * @returns {Boolean} - True if an array
-     */
-    DonkyCore.prototype._isArray = function( obj ) {
-        return Object.prototype.toString.call(obj) === '[object Array]';
-    }
-
-    /** 
-     * Execute a callback for every element in the matched set.
-     * @param {Object} obj - The object to iterate over - can be array or object
-     * @param {callback} callback - The callback to execute
-     * @returns {Object} - the object
-     */
-	DonkyCore.prototype._each = function( obj, callback) {
-		var value,
-			i = 0,
-			length = obj.length,
-			isArray = _instance._isArray( obj );
-
-			if ( isArray ) {
-				for ( ; i < length; i++ ) {
-					value = callback.call( obj[ i ], i, obj[ i ] );
-
-					if ( value === false ) {
-						break;
-					}
-				}
-			} else {
-				for ( i in obj ) {
-					value = callback.call( obj[ i ], i, obj[ i ] );
-
-					if ( value === false ) {
-						break;
-					}
-				}
-			}
-
-		return obj;
-	};
-
-
-    /** 
-     * Internal function to create a 'guid'
-     * @returns {String}
-     */
-    DonkyCore.prototype._uuid = function() {
-        var u = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
-            function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-
-        return u;
-    }
-
-
 /**
  * Creates DonkyCore object.
- * @constructor
+ * @class DonkyCore
  */
     function DonkyCore() {
 
@@ -129,20 +50,26 @@ var DonkyCore = (function() {
         DonkyCore.prototype.donkyNetwork = new DonkyNetwork({ donkyCore: _instance });
         DonkyCore.prototype.donkyAccount = new DonkyAccount({ donkyCore: _instance });
 
-        // lets eat our own dogfood and handle TRANSMITDEBUGLOG event
+        // lets eat our own dogfood and handle TransmitDebugLog and NewDeviceAddedToUser events
         _instance.subscribeToDonkyNotifications(
             {
                 name: "donkyCore",
-                version: _instance.version(),
+                version: _instance.version()
             },
-            {
+            [{
                 notificationType: "TransmitDebugLog",
                 handler: function(notification) {
                     _instance.donkyLogging.debugLog("TransmitDebugLog : " + JSON.stringify(notification));
                     _instance._queueAcknowledgement(notification, "Delivered");
                     _instance.submitLog();
                 }
-            },
+            },{
+                notificationType: "NewDeviceAddedToUser",
+                handler: function(notification) {
+                    _instance.donkyLogging.debugLog("NewDeviceAddedToUser : " + JSON.stringify(notification));
+                    _instance.publishLocalEvent({ type : "NewDeviceAddedToUser", data: notification });
+                }
+            }],
             true);
 
             _instance.subscribeToLocalEvent("DonkyInitialised", function(event) {
@@ -150,7 +77,7 @@ var DonkyCore = (function() {
             });
 
         return _instance;
-    };
+    }
 
     /**
      * Internal function to recursively convert all properties to camel case
@@ -168,7 +95,7 @@ var DonkyCore = (function() {
             hours: Math.floor(diff / (1000 * 60 * 60)),
             days: Math.floor(diff / (1000 * 60 * 60 * 24))
         };
-    }
+    };
 
     /**
      * Internal function to compare 2 version numbers
@@ -177,26 +104,37 @@ var DonkyCore = (function() {
      * @param {Object} options
      * @returns {Number} result
      */
-    DonkyCore.prototype._versionCompare = function(v1, v2, options) {
-        var lexicographical = options && options.lexicographical,
-            v1parts = v1.split('.'),
+    DonkyCore.prototype._versionCompare = function(v1, v2) {
+        var v1parts = v1.split('.'),
             v2parts = v2.split('.');
 
         function isValidPart(x) {
-            return (lexicographical ? /^\d+[A-Za-z]*$/ : /^\d+$/).test(x);
+            return (/^\d+$/).test(x);
+        }
+        
+        var valid = true;
+        _instance._each( v1parts, function(index,val){
+            valid = isValidPart( val );
+            if(valid){
+                v1parts[index] = parseInt(val);
+            }
+            return valid;    
+        });
+        
+        _instance._each( v2parts, function(index,val){
+            valid = isValidPart( val );
+            if(valid){
+                v2parts[index] = parseInt(val);
+            }
+            return valid;
+        });
+        
+        if(!valid){
+            return NaN;   
         }
 
-        if (!v1parts.every(isValidPart) || !v2parts.every(isValidPart)) {
-            return NaN;
-        }
-
-        while (v1parts.length < v2parts.length) v1parts.push("0");
-        while (v2parts.length < v1parts.length) v2parts.push("0");
-
-        if (!lexicographical) {
-            v1parts = v1parts.map(Number);
-            v2parts = v2parts.map(Number);
-        }
+        while (v1parts.length < v2parts.length) v1parts.push(0);
+        while (v2parts.length < v1parts.length) v2parts.push(0);
 
         for (var i = 0; i < v1parts.length; ++i) {
             if (v2parts.length == i) {
@@ -217,7 +155,7 @@ var DonkyCore = (function() {
         }
 
         return 0;
-    }
+    };
 
     /**
      * Internal function to determine whether there are any pending client notifications available.
@@ -230,7 +168,7 @@ var DonkyCore = (function() {
             pendingClientNotifications !== undefined &&
             _instance._isArray(pendingClientNotifications) &&
             pendingClientNotifications.length > 0;
-    }
+    };
 
     /**
      * Internal function to return the string length of the sum of any Pending Client Notifications.
@@ -244,7 +182,7 @@ var DonkyCore = (function() {
             len = pendingClientNotifications.length;
         }
         return len;
-    }
+    };
 
 
     /**
@@ -278,7 +216,7 @@ var DonkyCore = (function() {
         _instance.donkyLogging.infoLog("_getClientNotificationsToExecute() : " + JSON.stringify(args));
 
         return args;
-    }
+    };
     
 
     /**
@@ -302,60 +240,134 @@ var DonkyCore = (function() {
         };
 
         _instance.queueClientNotifications(acknowledgement);
-    }
+    };
 
+    /**
+     * Internal function to group a batch of server notifications. 
+     * @param {Object[]} serverNotifications - array of server notifications
+     */
+    DonkyCore.prototype._batchifyServerNotifications = function(serverNotifications) {
+        
+        // sort notifications into batches  
+        var batched = {
+            customNotifications: {},
+            donkyNotifications:{}
+        };
+        
+        _instance._each(serverNotifications, function(index, notification) {
+            
+            if(notification.type == "Custom"){
+                if( !_instance._isArray( batched.customNotifications[notification.data.customType] ) ){
+                    batched.customNotifications[notification.data.customType] = [];
+                }                
+                batched.customNotifications[notification.data.customType].push(notification);                
+            }else{
+                if( !_instance._isArray( batched.donkyNotifications[notification.type] ) ){
+                    batched.donkyNotifications[notification.type] = [];
+                }
+                batched.donkyNotifications[notification.type].push(notification);                    
+            }  
+            
+        }); 
+        
+        return batched;       
+    };
+
+    /**
+     * Internal function to iterate through the subscribers and see if any have the autoAcknowledge property set.
+     * @param {Object[]} subscribers - array of subscribers 
+     * @param {type} type - the notification type - i.e. "SimplePushMessage"
+     */
+    DonkyCore.prototype._isAutoAcknowledge = function(subscribers, type) {
+        var autoAcknowledge = false;
+
+        _instance._each(subscribers, function(handlerIndex, subscriber) {
+            if (subscriber.autoAcknowledge === true && subscriber.notificationType === type) {
+                autoAcknowledge = true;
+            }            
+        });
+        
+        return autoAcknowledge;
+    };
+
+    /**
+     * Internal function to process a batch of server notifications.
+     * @param {Object[]} notifications - array of server notifications 
+     * @param {String} type - the type of the notifications
+     * @param {Object[]} subscribers - array of subscribers
+     * @returns {Boolean} - returns whether the notifuications were handled    
+     */
+    DonkyCore.prototype._processServerNotificationBatch = function(notifications, type, subscribers) {
+
+        var handled = false;
+        // iterate over all the subscribers to see if any are interested in this type of notification
+        _instance._each(subscribers, function(handlerIndex, subscriber) {
+
+            if(subscriber.notificationType == type && !subscriber.removed){
+                                
+                try {                        
+                    if(_instance._isFunction(subscriber.batchHandler)){
+                        // batch mode
+                        subscriber.batchHandler(notifications);
+                        handled = true;                                                    
+                    }else if(_instance._isFunction(subscriber.handler)){
+                        // old mode
+                        _instance._each(notifications, function(index, notification){
+                            subscriber.handler(notification);
+                        });
+                        handled = true;
+                    }else{
+                        _instance.donkyLogging.warnLog("No handler on subscriber interface");    
+                    }
+                } catch (e) {
+                    _instance.donkyLogging.errorLog("Caught exception processing server notifications");
+                }                                                       
+            }
+        });            
+        
+        if (!handled) {
+            _instance.donkyLogging.warnLog("Message batch: " + type + " not handled");
+        }
+                         
+        return handled;
+    };
 
     /**
      * Internal function to process a batch of server notifications. They are farmed out to any subscribers or just acknowledged.
+     * @param {ServerNotification[]} serverNotifications - array of server notifications 
      */
     DonkyCore.prototype._processServerNotifications = function(serverNotifications) {
 
-        _instance._each(serverNotifications, function(index, notification) {
-
-            var isCustom = notification.type == "Custom";
-
-            var handled = false;
-            var autoAcknowledge = false;
-
-            var subscriberArray = isCustom ? customNotificationSubscribers : donkyNotificationSubscribers;
-
-            if (isCustom) {
-                // Acknowledge custom notifications immediately ...
-                _instance._queueAcknowledgement(notification, "Delivered");
-                handled = true;
-            }
-
-            // any subscribers ?
-            _instance._each(subscriberArray, function(handlerIndex, subscriber) {
-                try {
-                    // see if this handler can process this notification type ...
-                    if (((isCustom && subscriber.notificationType == notification.data.customType) ||
-                        subscriber.notificationType == notification.type) && !subscriber.removed) {
-                        // invoke supplied callback ...
-                        subscriber.handler(notification);
-                        handled = true;
-                        if (subscriber.autoAcknowledge) {
-                            autoAcknowledge = true;
-                        }
-                    }
-                } catch (e) {
-                    _instance.donkyLogging.errorLog("Caught exception processing Message: " + notification.type );
-                    handled = false;
-                }
-            });
-
-            if (!handled) {
-                _instance.donkyLogging.warnLog("Message: " + notification.type + " not handled");
-            }
-
-            // If autoAcknowledge is false, we ASSUME they have acknowledged it (if they haven't they will be repeatedly receiving it every synchronise)
-            if (!isCustom && (!handled || autoAcknowledge)) {
-
-                _instance._queueAcknowledgement(notification, handled ? "Delivered" : "DeliveredNoSubscription");
+        var handled, autoAcknowledge;
+        var batched = _instance._batchifyServerNotifications(serverNotifications);
+                       
+        // iterate over all the different batches of donky server notifications
+        _instance._each(batched.donkyNotifications, function(type, notifications){
+                        
+            autoAcknowledge = _instance._isAutoAcknowledge(donkyNotificationSubscribers, type);
+            handled = _instance._processServerNotificationBatch(notifications, type, donkyNotificationSubscribers);
+                      
+            // If autoAcknowledge is false, we ASSUME they have acknowledged it 
+            // (if they haven't they will be repeatedly receiving it every synchronise)
+            if (!handled || autoAcknowledge) {
+                _instance._each(notifications, function(index, notification){
+                    _instance._queueAcknowledgement(notification, handled ? "Delivered" : "DeliveredNoSubscription");
+                });
             }
         });
-    }
-
+        
+        // iterate over all the different batches of custom server notifications
+        _instance._each(batched.customNotifications, function(type, notifications){
+            
+            handled = _instance._processServerNotificationBatch(notifications, type, customNotificationSubscribers);
+                        
+            // always Acknowledge custom notifications           
+            _instance._each(notifications, function(index, notification){
+                _instance._queueAcknowledgement(notification, "Delivered");
+            });
+        });
+    };
+    
     /**
      * Internal function to process a batch of client notifications BEFORE they have been sent. 
      * They are farmed out to any subscribers.
@@ -370,7 +382,7 @@ var DonkyCore = (function() {
                 }
             });
         });
-    }
+    };
 
     /** 
      * Validates SendContent Notifications - checks for payloads greater than CustomContentMaxSizeBytes. Any messages that are too large will be removed and a validation error will be returned.
@@ -403,6 +415,7 @@ var DonkyCore = (function() {
 
     /** 
      * Translates the supplied ContentNotifications into SENDCONTENT ClientNotifications and queues them.
+     * @memberof DonkyCore
      * @param {(ContentNotification|ContentNotification[])} notifications
      * @returns {Object} 
      */
@@ -448,7 +461,7 @@ var DonkyCore = (function() {
                 return { 
                     succeeded: false, 
                     failedClientNotifications: invalidNotifications,
-                    reason: "The following notifications are too large and have not been processsed",
+                    reason: "The following notifications are too large and have not been processsed"
                 };
             } else {
                 return{ succeeded: true };
@@ -457,10 +470,11 @@ var DonkyCore = (function() {
         }catch(e){
 			_instance.donkyLogging.errorLog("caught exception in queueCustomNotifications() : " + e );
 		}
-    }
+    };
 
 /**
  * Send a notification via the Donky network immediately if possible.
+ * @memberof DonkyCore
  * @param {ContentNotification|ContentNotification[]} notifications - The notification(s) to send
  * @param {Callback} resultHandler - The callback to invoke when the notifications has been sent. (optional).
  */    
@@ -504,11 +518,12 @@ var DonkyCore = (function() {
 		}catch(e){
 			_instance.donkyLogging.errorLog("caught exception in sendContentNotifications() : " + e );
 		}
-    }
+    };
 
 
 /**
  * Creates a content notification from a list of users, the type and the data.
+ * @memberof DonkyCore 
  * @param {String|String[]} users - The users(s) to send to (string or array of strings
  * @param {String} customType - The custom type
  * @param {Object} data - The data to send
@@ -544,10 +559,11 @@ var DonkyCore = (function() {
 			_instance.donkyLogging.errorLog("caught exception in formatContentNotification() : " + e );
             return null;
         }
-    }
+    };
 
     /** 
      * Adds client notifications to the queue for submission to the network.
+     * @memberof DonkyCore
      * @param {(ClientNotification|ClientNotification[])} notifications
      */
     DonkyCore.prototype.queueClientNotifications = function(notifications) {
@@ -572,7 +588,7 @@ var DonkyCore = (function() {
 		}catch(e){
 			_instance.donkyLogging.errorLog("caught exception in queueClientNotifications() : " + e );
 		}
-    }
+    };
 
     /** 
      * Compare two dictionaries.
@@ -607,7 +623,7 @@ var DonkyCore = (function() {
         }
 
         return same;
-    }
+    };
 
     /** 
      * Checks to see whether the current module info differs from what network has.
@@ -634,7 +650,7 @@ var DonkyCore = (function() {
                 });
             }
         }
-    }
+    };
 
     /* Compares passed in UserDetails object with currently stored one.
      * @returns {Boolean} - True is returned if they are different and False otherwise 
@@ -651,7 +667,7 @@ var DonkyCore = (function() {
                  userDetails.countryCode != registrationDetails.userDetails.countryCode ||
                  userDetails.phoneNumber != registrationDetails.userDetails.phoneNumber || 
                  !_instance._compareDictionaries(userDetails.additionalProperties,registrationDetails.userDetails.additionalProperties));
-    }
+    };
 
     /* Compares passed in DeviceDetails object with currently stored one.
      * @returns {Boolean} - True is returned if they are differen' and False otherwise 
@@ -663,7 +679,7 @@ var DonkyCore = (function() {
         return (deviceDetails.type != registrationDetails.deviceDetails.type ||
                  deviceDetails.name != registrationDetails.deviceDetails.name ||
                 !_instance._compareDictionaries(deviceDetails.additionalProperties,registrationDetails.deviceDetails.additionalProperties));
-    }
+    };
     
     /** 
      * Checks the userDetails and device details passed in to the public initialise method and updates network if there are any changes.
@@ -709,12 +725,12 @@ var DonkyCore = (function() {
             _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
             settings.resultHandler({succeeded : true});
         }    
-    }
+    };
 
     /** 
     * This operation should ensure the SDK is active, and that the device is registered on the network with the correct API key and able to send/receive data.
     * This should also ensure that the registered module details are passed to the network if changed.
-    *
+    * @memberof DonkyCore
     * @param {Object} settings
     * @param {string} settings.apiKey - The Client API key for the app space
     * @param {UserDetails} settings.userDetails - User details to use for the registration (optional)
@@ -724,6 +740,14 @@ var DonkyCore = (function() {
     */
     DonkyCore.prototype.initialise = function(settings) {
         try {
+        
+            var browserInfo = _instance.donkyAccount._getBrowserInfo();
+            
+            if(browserInfo.name === "MSIE" && browserInfo.version < 10){
+                var message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
+                _instance.donkyLogging.warnLog(message);
+                throw new Error(message);                
+            }               
 
             if (settings === undefined || settings === null) {
                 throw new Error("no options specified");
@@ -788,7 +812,7 @@ var DonkyCore = (function() {
                 settings.resultHandler({succeeded : false});
             }
 		}
-    }
+    };
 
 /**
  * Private method that actually processes the subscription
@@ -825,7 +849,7 @@ var DonkyCore = (function() {
                 var subscriber = subscriberArray[i];
 
                 if (subscriber.notificationType === subscription.notificationType && 
-                    subscriber.handler === subscription.handler) { 
+                    (subscriber.handler === subscription.handler || subscriber.batchHandler === subscription.batchHandler)) { 
                     //eventSubscribers.splice(i, 1);
                     subscriber.removed = true;
                 }
@@ -835,6 +859,7 @@ var DonkyCore = (function() {
 
 /**
  * Adds a subscription for specific types of Donky notification.  Should be called before Initialise to avoid a race condition resulting in missed notifications.
+ * @memberof DonkyCore
  * @param {ModuleDefinition}  moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to register for this module. ( Object  or an array of {@link Subscription} objects.
  * @param {Boolean}  autoAcknowledge - Specifies whether the core should send a NOTIFYACK for this notification type.
@@ -845,10 +870,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in subscribeToDonkyNotifications() : " + e );
 		}    
-    }
+    };
 
 /**
  * Adds a subscription for specific types of Donky notification.  Should be called before Initialise to avoid a race condition resulting in missed notifications.
+ * @memberof DonkyCore
  * @param {ModuleDefinition} moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to register for this module ( Object  or an array of {@link Subscription} objects.
  */
@@ -858,10 +884,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in subscribeToContentNotifications() : " + e );
 		}    
-    }
+    };
 
 /**
  * Removes a subscription for specific types of Donky notification.
+ * @memberof DonkyCore
  * @param {ModuleDefinition} moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to unregister for this module ( Object  or an array of {@link Subscription} objects.
  */
@@ -871,10 +898,11 @@ var DonkyCore = (function() {
         }catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in unsubscribeFromContentNotifications() : " + e );
 		}            
-    }
+    };
 
 /**
  * Removes a subscription for specific types of Donky notification.
+ * @memberof DonkyCore
  * @param {ModuleDefinition} moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to unregister for this module ( Object  or an array of {@link Subscription} objects.
  */
@@ -884,10 +912,12 @@ var DonkyCore = (function() {
         }catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in unsubscribeFromDonkyNotifications() : " + e );
 		}            
-    }
+    };
 
 /**
- * Subscribes to outbound client notifications.  Callbacks are made during the Synchronise flow.
+ * Subscribes to outbound client notifications.  Callbacks are made during the Synchronise flow. 
+ * Note: batch mode subscription not supported for this method.
+ * @memberof DonkyCore
  * @param {ModuleDefinition} moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to register for this module ( Object  or an array of {@link Subscription} objects.
  */
@@ -905,10 +935,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in subscribeToOutboundNotifications() : " + e );
 		}    
-    }
+    };
 
 /**
  * Removes a subscription for specific types of Donky notification.
+ * @memberof DonkyCore
  * @param {ModuleDefinition} moduleDefinition - The module details
  * @param {(Subscription|Subscription[])} subscriptions - The subscriptions to unregister for this module ( Object  or an array of {@link Subscription} objects.
  */
@@ -918,12 +949,12 @@ var DonkyCore = (function() {
         }catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in unsubscribeFromOutboundNotifications() : " + e );
 		}            
-    }
+    };
 
 /**
- *Publishes a LocalEvent.
- *
- *  @param {LocalEvent} event
+ * Publishes a LocalEvent.
+ * @memberof DonkyCore
+ * @param {LocalEvent} event
  */    
     DonkyCore.prototype.publishLocalEvent = function(event) {
         try {
@@ -948,11 +979,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.warnLog("caught exception in publishLocalEvent() : " + e );
 		}    
-    }
+    };
 
 /**
  * Subscribes the caller to a local event type.
- *
+ *  @memberof DonkyCore
  *  @param {String} eventType - the type of event to subscribe to
  *  @param {Callback} handler - the callback
  */    
@@ -962,11 +993,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in subscribeToLocalEvent() : " + e );
 		}    
-    }
+    };
 
 /**
  * Removes a subscription for a local event type.
- *
+ * @memberof DonkyCore
  *  @param {String} eventType - the type of event to subscribe to
  *  @param {Callback} handler - the callback
  */    
@@ -990,11 +1021,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in unsubscribeFromLocalEvent() : " + e );
 		}    
-    }
+    };
 
 /**
  * Given a Donky assetId, this function formats a url that can be used to access the asset.
- *
+ *  @memberof DonkyCore
  *  @param {String} assetId
  *  @returns {String} formatted url of the asset
  */    
@@ -1006,11 +1037,11 @@ var DonkyCore = (function() {
 			 _instance.donkyLogging.errorLog("caught exception in formatAssetUrl() : " + e );
             return null;
         }    
-    }
+    };
 
     /**
      * Formats asset download url that can be used to access the asset
-     *
+     * @memberof DonkyCore
      *  @param {String} assetId
      *  @param {String} name
      *  @returns {String} formatted url of the asset
@@ -1024,13 +1055,13 @@ var DonkyCore = (function() {
 			 _instance.donkyLogging.errorLog("caught exception in formatAssetDownloadUrl() : " + e );
             return null;
         }    
-    }
+    };
 
 /**
  *  The Core SDK will act as a Service Provider, allowing modules to register ‘services’ that other modules can consume.  
  *  This is largely to enable other Donky modules to interoperate.
  *  Only a single instance of any given type can be tracked.  This will replace any previously registered instances of the given type.
- *
+ *  @memberof DonkyCore
  *  @param {String} type
  *  @param {Object} instance
  */    
@@ -1046,11 +1077,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in registerService() : " + e );
         }    
-    }
+    };
 
 /**
  *  Gets a reference to a registered service.
- *
+ *  @memberof DonkyCore
  *  @param {String} type
  *  @returns {Object}
  */    
@@ -1068,10 +1099,11 @@ var DonkyCore = (function() {
 			 _instance.donkyLogging.errorLog("caught exception in getService() : " + e );
              return null;
         }    
-    }
+    };
 
 /**
  *  Unregisters a service.
+ *  @memberof DonkyCore
  *  @param {String} type
  */    
     DonkyCore.prototype.unregisterService = function(type) {
@@ -1085,7 +1117,7 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in unregisterService() : " + e );
         }    
-    }
+    };
 
     /**
      * Object to store registered modules.
@@ -1095,6 +1127,7 @@ var DonkyCore = (function() {
 
 /**
  *  Called to register a module with the core.  Enables a module that doesn’t use any notifications to be discoverable.  Not required if notifications are being used.
+ *  @memberof DonkyCore
  *  @param {ModuleDefinition} moduleDefinition - The module details
  */    
     DonkyCore.prototype.registerModule = function(moduleDefinition) {
@@ -1109,10 +1142,11 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in registerModule() : " + e );
         }    
-    }
+    };
 
 /**
  *  Called to register a module with the core.  Enables a module that doesn’t use any notifications to be discoverable.  Not required if notifications are being used.
+ *  @memberof DonkyCore
  *  @param {String} name - The name of the module to check for
  *  @param {String} minimumVersion - The minimum version required (optional)
  *  @returns {Boolean} result - True if a matching module is registered, otherwise false
@@ -1136,11 +1170,12 @@ var DonkyCore = (function() {
 			 _instance.donkyLogging.errorLog("caught exception in isModuleRegistered() : " + e );
             return false;
         }    
-    }
+    };
 
 
 /**
  *  Returns details of all registered modules.
+ *  @memberof DonkyCore
  *  @returns {ModuleDefinition[]} moduleDefinition - The module details
  */    
     DonkyCore.prototype.getRegisteredModules = function() {
@@ -1154,9 +1189,9 @@ var DonkyCore = (function() {
             return modules;
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in getRegisteredModules() : " + e );
-            return false;
+            return null;
         }    
-    }
+    };
 
 /**
  *  Uploads the current debug log to the Donky Network.
@@ -1230,10 +1265,11 @@ var DonkyCore = (function() {
             }
         }
 
-    }
+    };
 
 /**
  *  Uploads the current debug log to the Donky Network.
+ *  @memberof DonkyCore
  *  @param {Callback} callback - the (optional) callback to fire upon completion
  */    
     DonkyCore.prototype.submitLog = function(callback) {
@@ -1242,15 +1278,101 @@ var DonkyCore = (function() {
 		}catch(e){
 			 _instance.donkyLogging.errorLog("caught exception in submitLog() : " + e );
         }    
-    }
+    };
+    
+    
+/**
+ *  Export the root inatallation folder to any other modules that need to refernce any other static files part of the release. 
+ */    
+    DonkyCore.prototype.installDir = installDir;
 
 /**
  *  Returns the version of this module.
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.0.0.1";
-    }
+        return "2.1.0.2";
+    };
+    
+    /** 
+     * Internal function to perform equivalent to jQuery.extend
+     * @param {obj} the object to test
+     * @returns {Object} - The extended object
+     */
+    DonkyCore.prototype._extend = function (){
+        for(var i=1; i<arguments.length; i++)
+            for(var key in arguments[i])
+                if(arguments[i].hasOwnProperty(key))
+                    arguments[0][key] = arguments[i][key];
+        return arguments[0];
+    };
+
+    /** 
+     * Internal function to determine whether argument is a function
+     * @param {obj} the object to test
+     * @returns {Boolean} - True if a function
+     */
+    DonkyCore.prototype._isFunction = function(obj) {
+        var getType = {};
+        return obj && getType.toString.call(obj) === '[object Function]';
+    };
+
+    /** 
+     * Internal function to determine whether argument is an array
+     * @param {obj} the object to test
+     * @returns {Boolean} - True if an array
+     */
+    DonkyCore.prototype._isArray = function( obj ) {
+        return Object.prototype.toString.call(obj) === '[object Array]';
+    };
+
+    /** 
+     * Execute a callback for every element in the matched set.
+     * @param {Object} obj - The object to iterate over - can be array or object
+     * @param {callback} callback - The callback to execute
+     * @returns {Object} - the object
+     */
+	DonkyCore.prototype._each = function( obj, callback) {
+		var value,
+			i = 0,
+			length = obj.length,
+			isArray = _instance._isArray( obj );
+
+			if ( isArray ) {
+				for ( ; i < length; i++ ) {
+					value = callback.call( obj[ i ], i, obj[ i ] );
+
+					if ( value === false ) {
+						break;
+					}
+				}
+			} else {
+				for ( i in obj ) {
+					value = callback.call( obj[ i ], i, obj[ i ] );
+
+					if ( value === false ) {
+						break;
+					}
+				}
+			}
+
+		return obj;
+	};
+
+
+    /** 
+     * Internal function to create a 'guid'
+     * @returns {String}
+     */
+    DonkyCore.prototype._uuid = function() {
+        var u = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
+            function(c) {
+                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+                return v.toString(16);
+            });
+
+        return u;
+    };
 
     return DonkyCore;
 })();
@@ -1265,7 +1387,7 @@ var DonkyCore = (function() {
 		define('donkyCore', ['donkyData', 'donkyAccount', 'donkyLogging', 'donkyNetwork'], factory);
 	} else {
 		/*jshint sub:true */
-		window['donkyCore'] = factory();
+		window.donkyCore = factory();
 	}
 
 }());

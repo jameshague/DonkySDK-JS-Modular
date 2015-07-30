@@ -1,0 +1,40 @@
+<!-- Template to render homepage -->    
+<script id="handleTemplate" type="text/x-moustache-tmpl">
+   <button id="donkyHandle" type="button" class="navbar-toggle collapsed shadow" >        
+        <span class="badge">{{BadgeCount}}</span>
+        <i class="fa fa-bars"></i>
+    </button>    
+</script>        
+
+<!-- Template to render homepage -->    
+<script id="homePageTemplate" type="text/x-moustache-tmpl">
+
+    <div class="panel panel-default donkyInboxUI">
+        <div class="panel-heading">
+            
+            
+            <div class="row">
+                <div class="col-xs-10">
+                    <div class="headerLogo"></div>
+                </div>
+                <div class="col-xs-2">
+                    <a class="btn exitDonky"><span class="glyphicon glyphicon-remove"></span> </a>
+                </div>
+            </div>            
+            
+            
+            
+            
+            
+        </div>
+        <div class="panel-body">
+            <ul class="list-group">			
+				{{#Views}} 
+                <li class="list-group-item" data-view-index="{{Index}}">
+                    {{{MenuHtml}}}
+                </li>                
+			    {{/Views}} 
+            </ul>
+        </div>
+    </div>            
+</script>        

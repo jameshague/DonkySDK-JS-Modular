@@ -1,39 +1,58 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>richPopup</title>
-    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
-    <script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Rich Popup</title>
+    <script src="https://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
     <script src="../modules/require-config-debug.js"></script>
 </head>
 <body>
-    <div id="logPanel"></div>
-
+	<div id="logPanel"></div>	
     <script>
+    $(function() {
+      // Handler for .ready() called.
+    
+        // create jQuery object for logPanel and cache it 
         var $logPanel = $("#logPanel");
+        // function to perform logging
         function log(message) {
-            $logPanel.append("<div>"+message+"</div>");
+            $logPanel.append("<pre>"+message+"</pre>");
         }
-
-        require(['donkyRichPopupUI','donkyCore'],function(donkyRichPopupUI,donkyCore) {
-
+        
+        /*
+            This demo uses donkyRichPopupUI to display a rich popup
+            Here is a summary of the modules used and their role:
+            
+            donkyCore - Connects to donky Network and provides all cor functionality
+            donkyCoreAnalytics - Creates basic analytics data for the user             
+            donkyRichPopupUI - Displays rich message in a popup
+         */
+        
+        require(['donkyRichPopupUI','donkyCore', 'donkyCoreAnalytics'],function(donkyRichPopupUI,donkyCore, donkyCoreAnalytics) {
+            // Initialise Donky (anonymously)
             donkyCore.initialise({
-                apiKey: ">>Enter API Key <<",
+                
+                apiKey: ">>ENTER API KEY HERE<<",
                 resultHandler: function(result) {
 
                     if(result.succeeded) {
+                        // Get the current username and display on the screen so we can target this user with a campaign.
                         var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                        log("Send rich message from campaign Builder to \""+registrationDetails.userDetails.id+"\"");
 
-                        log("<p> Send rich message from campaign Builder to \""+registrationDetails.userDetails.id+"\"</p>");
-
-                        donkyRichPopupUI.initialise();
-                    }
+                        // Initialise the donkyRichPopupUI module
+                        donkyRichPopupUI.initialise();						
+                    }else{
+                        // Failure - log out the result object as it will contain an error message
+                        log(JSON.stringify(result));
+    				}
                 }
             });
         });
-
+    });
     </script>
 </body>
 </html>

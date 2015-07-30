@@ -1,0 +1,156 @@
+<script id="richInboxMenuItemTemplate" type="text/x-moustache-tmpl">
+    <div class="row donkyContainerIndex">
+        <div class="col-xs-2">
+            <span class="circle donkyContainerIndexBadge">
+                {{#unreadRichMessageCount}}
+                <span class="badge">{{unreadRichMessageCount}}</span>
+                {{/unreadRichMessageCount}}                        
+                <i class="fa fa-inbox"></i>
+            </span>                    
+        </div>
+        <div class="col-xs-8">
+            <span class="donkyContainerIndexName">Inbox</span>
+        </div>
+        <div class="col-xs-2">
+            <a class="btn donkyContainerIndexButton">
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>
+        </div>
+    </div>
+</script>
+
+
+<script id="richInboxListTemplate" type="text/x-moustache-tmpl">
+    <form role="form">
+    <ul class="list-group">
+        {{#Messages}} 
+        <li class="noselect list-group-item richMessage {{^IsRead}}unread{{/IsRead}} {{#IsExpired}}expired{{/IsExpired}}" data-message-id="{{MessageId}}" {{#ExpiryTimestamp}}data-expiry-timestamp="{{ExpiryTimestamp}}{{/ExpiryTimestamp}}">
+            
+            <div class="row center-row">
+                <div class="col-xs-1 center checkboxColumn">
+                    <div class="checkbox checkbox-info checkbox-circle" style="display:inline-block;">
+                        <input id="{{MessageId}}" type="checkbox" {{#Selected}}checked{{/Selected}}>
+                        <label for="{{MessageId}}"></label>
+                    </div>                    
+                </div>
+                <div class="col-xs-3 center  avatarColumn">                              
+                    {{#AvatarURL}}
+                        <div class="senderAvatarContainer">
+                            <img class="img-circle" src="{{AvatarURL}}" />                            
+                            {{^IsRead}}
+                                <div class="newRichMessageBadgeContainer">
+                                    <div class="newRichMessageBadge"><span>NEW</span></div>
+                                </div>                                 
+                            {{/IsRead}}                            
+                        </div>                    
+                    {{/AvatarURL}}                    
+                </div>
+                <div class="col-xs-8 center  descriptionColumn">
+                    <small {{#SentTimestampRaw}}data-time-stamp="{{SentTimestampRaw}}"{{/SentTimestampRaw}} class="sentTime pull-right sent{{^IsRead}} unread{{/IsRead}}">{{SentTimestamp}}</small>
+                    <span class="pull-left messageSender">{{{SenderDisplayName}}}</span>      
+                    <div class="clearfix"></div>
+                    <div class="messageBody">{{{Description}}}</div>                    
+
+                </div>
+            </div>
+            
+
+        </li>
+        {{/Messages}}  
+                
+        {{^Messages}}
+            <li class="list-group-item no-messages">No messages</li>
+        {{/Messages}}                                                 				    
+    </ul>
+        </form>
+</script>        
+
+
+<!-- Template to render rich message inbox -->    
+<script id="richInboxTemplate" type="text/x-moustache-tmpl">
+    <div class="panel panel-default donkyInboxUI">
+        <div class="panel-heading">            
+            <div class="row">
+                <div class="col-xs-4">
+                 {{#BackButton}}
+                    <a class="btn backToHomePage"><i class="fa fa-chevron-left"></i></a>
+                 {{/BackButton}}
+                </div>
+                <div class="col-xs-4 text-center">
+                    <span class="panel-title">Inbox</span>                                       
+                </div>
+                <div class="col-xs-4">                
+                    <a id="toggleEditMode" class="btn pull-right"><i class="fa fa-list-ul"></i></a>
+                    <a style="display:none;" id="deleteSelectedRichMessages" class="btn pull-right"><i class="fa fa-trash"></i></a>                                
+                </div>
+            </div>            
+        </div>
+        
+        <div class="panel-body">
+            <div class="search-wrapper">
+                <span class="glyphicon glyphicon-search"></span>
+                <input type="text" class="form-control filter" placeholder="Search ..." value="{{Filter}}" id="richInboxFilter"/>
+                <span class="glyphicon glyphicon-remove" id="resetRichInboxFilter"></span>
+            </div>
+            <div id="richInboxListContainer" {{#EditMode}}class="editMode"{{/EditMode}} ></div>
+            
+        </div>
+                
+        <div id="richInboxOverlay"></div>
+        <div id="richInboxExpiredMessagePopup">
+            <h4>Expired message</h4>
+            <p>This message has expired, please delete it or alternatively delete all your expired messages.</p>
+            <a class="pull-left" id="deleteAllExpiredRichMessages">DELETE ALL</a>
+            <a class="pull-right" id="DeleteExpiredRichMessage">DELETE</a>
+        </div>
+        
+        
+    </div>            
+</script>        
+    
+<!-- Template to render individual rich message -->    
+<script id="richMessageTemplate" type="text/x-moustache-tmpl">                               
+    <div class="panel panel-default donkyInboxUI" >
+        <div class="panel-heading">
+                        
+            <div class="row">
+                <div class="col-xs-4"><a class="btn backToRichInbox"><i class="fa fa-chevron-left"></i></a></div>
+                <div class="col-xs-4 text-center hideOverflow"><span class="panel-title">{{SenderDisplayName}}</span></div>
+                <div class="col-xs-4">
+                    <a class="btn deleteRichMessage pull-right" data-message-id="{{MessageId}}"><i class="fa fa-trash"></i></a>
+                {{#CanShare}}
+                    <a class="btn shareRichMessage pull-right"><i class="fa fa-share-alt"></i></a>
+                 {{/CanShare}}
+                </div>
+            </div>            
+            
+        </div>
+        <div class="panel-body">
+            <div id="richMessageContainer" >
+                <iframe id="richMessage"></iframe>
+            </div>                        
+        </div>
+            {{#CanShare}}
+            <div id="richMessageControls">
+                <h3>Share to ...</h3>
+                <span class="glyphicon glyphicon-remove" id="richMessageControlsClose"></span>
+                <div class='justifyContainer'>
+                    <a class="share-icon google-plus" target="_blank" href="https://plus.google.com/share?url={{ShareUrl}}" data-message-id="{{MessageId}}" data-shared-to="GOOGLEPLUS">
+                        <i class="fa fa-google-plus"></i>
+                    </a>
+                    <a class="share-icon facebook" target="_blank" href="http://www.facebook.com/sharer/sharer.php?u={{ShareUrl}}&t={{ShareMessage}}" data-message-id="{{MessageId}}" data-shared-to="FACEBOOK">
+                        <i class="fa fa-facebook"></i>
+                    </a>
+                    <a class="share-icon twitter" target="_blank" href="http://www.twitter.com/share?text={{ShareMessage}}&url={{ShareUrl}}" data-message-id="{{MessageId}}" data-shared-to="TWITTER">
+                        <i class="fa fa-twitter"></i>
+                    </a>                                   
+                    <a class="share-icon envelope" href="mailto: ?subject={{ShareMessage}}&body={{ShareUrl}}" data-message-id="{{MessageId}}" data-shared-to="EMAIL">
+                        <i class="fa fa-envelope"></i>
+                    </a>
+                    <span class='stretch'></span>
+                </div>                                                       
+            </div>
+            {{/CanShare}}
+        
+    </div>                         
+</script>        

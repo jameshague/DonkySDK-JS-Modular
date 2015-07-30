@@ -1,0 +1,35 @@
+body{
+	overflow:hidden;
+	background-color: transparent;
+}
+#donkyHandle{
+	position: absolute;
+	background-color:#222 !important;
+	color:white !important;
+	top: 4px;
+	left: 7px;
+	padding: 4px 8px;
+	border-top-left-radius: 50%;
+	border-bottom-left-radius: 50%;
+	border-top-right-radius: 0;
+  	border-bottom-right-radius: 0;	
+    -webkit-box-shadow: -1px 1px 1px 0px #888;
+    -moz-box-shadow: -1px 1px 1px 0px #888;
+    box-shadow: -1px 1px 1px 0px #888;    
+	
+}
+
+#donkyHandle .fa{
+	padding: 5px 5px 5px 0px;	
+	font-size: 20px;
+}
+
+#donkyHandle .badge{position: absolute;
+	background-color:#1CA7DF;
+	border: 2px solid white;
+	top: -8px;
+	left: -6px;
+	font-size: 10px;
+	padding: 3px 5px;
+}
+

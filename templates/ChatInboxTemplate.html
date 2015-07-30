@@ -1,0 +1,48 @@
+<script id="chatInboxMenuItemTemplate" type="text/x-moustache-tmpl">
+  
+    <div class="row donkyContainerIndex">
+        <div class="col-xs-2">
+            <span class="circle donkyContainerIndexBadge">
+                {{#unreadChatMessageCount}}
+                <span class="badge">{{unreadChatMessageCount}}</span>
+                {{/unreadChatMessageCount}}                        
+                <i class="fa fa-comment"></i>
+            </span>                    
+        </div>
+        <div class="col-xs-8">
+            <span class="donkyContainerIndexName">Chat Inbox</span>
+        </div>
+        <div class="col-xs-2">
+            <a class="btn donkyContainerIndexButton">
+                <span class="glyphicon glyphicon-chevron-right"></span>
+            </a>
+        </div>
+    </div>
+  
+</script>
+
+
+chatInboxTemplate
+
+<!-- Template to render rich message inbox -->    
+<script id="chatInboxTemplate" type="text/x-moustache-tmpl">
+    <div class="panel panel-default donkyInboxUI">
+        <div class="panel-heading">            
+            <div class="row">
+                <div class="col-xs-2"><a class="btn backToHomePage"><span class="glyphicon glyphicon-chevron-left"></span></a></div>
+                <div class="col-xs-8 text-center">
+                    <span class="panel-title">Chat Messages</span>                                       
+                </div>
+                <div class="col-xs-2"></div>
+            </div>            
+        </div>
+        
+        <div class="panel-body">
+            <img class="img-responsive" src="https://decolonizeallthethings.files.wordpress.com/2015/01/under-construction.jpg" />
+            <img class="img-responsive" src="https://decolonizeallthethings.files.wordpress.com/2015/01/under-construction.jpg" />
+            <img class="img-responsive" src="https://decolonizeallthethings.files.wordpress.com/2015/01/under-construction.jpg" />
+            <img class="img-responsive" src="https://decolonizeallthethings.files.wordpress.com/2015/01/under-construction.jpg" />            
+        </div>
+    </div>            
+</script>        
+    

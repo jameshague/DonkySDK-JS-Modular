@@ -65,11 +65,10 @@
 		//====================
 
 		/**
-		 * @class
-		 * @name DonkyCoreAnalytics
+		 * @class DonkyCoreAnalytics
 		 */
 		function DonkyCoreAnalytics() {
-            console.log("Constructing DonkyCoreAnalytics");
+            donkyCore.donkyLogging.infoLog("Constructing DonkyCoreAnalytics");
 
             // This event is ALWAYS published on succesful initialisation - hook into it and run our analysis ...
             donkyCore.subscribeToLocalEvent("DonkyInitialised", function(event) {
@@ -83,6 +82,9 @@
 
 		}
 
+        /**
+         *  @memberof DonkyCoreAnalytics 
+         */
 		DonkyCoreAnalytics.prototype = {
 
             /**
@@ -90,7 +92,7 @@
              *  This employs the use of a cookie with a rolling expiry of sessionTimeout. Every page reload will update the cookie.
              *  If the cookie isnt there (a new session) we send an AllLaunch and possibly an AppSession client notification.
              *  On window.reload, we set a SessionEndTime which will be used to populate the AppSession notification. 
-             *  The AppSession notification is referring to the PREVIOUS session.
+             *  The AppSession notification is referring to the PREVIOUS session.             
              */    
             analyse : function() {
     
@@ -99,7 +101,7 @@
 		        
 		            var cookie = _util.getCookie("appLaunch");
 
-		            if (cookie == null) {
+		            if (cookie === null) {
 		                var queued = 0;
                         _util.setCookie("appLaunch", "yes", sessionTimeout );
 		                donkyCore.donkyLogging.debugLog("new session");
@@ -107,7 +109,7 @@
 		                var lastSessionStartTime = donkyCore.donkyData.get("SessionStartTime");
                         var lastSessionEndTime = donkyCore.donkyData.get("SessionEndTime");
 
-		                if (lastSessionStartTime != null) {
+		                if (lastSessionStartTime !== null) {
 
 		                    // notify donky 
 		                    var sessionClientNotification = {

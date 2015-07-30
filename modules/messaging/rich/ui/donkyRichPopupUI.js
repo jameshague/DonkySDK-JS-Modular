@@ -35,22 +35,19 @@
 
         var defaults = { 
             // CSS URL to style the notification popup
-            popupCSSURL: "../css/DonkyRichPopup.css",
+            popupCSSURL: donkyCore.installDir + "css/DonkyRichPopup.css",
             // INLINE CSS to style the notification popup
             popupCSS: null,
-            // Direction for popup to slide from when initially shown [top|right|bottom|left]
-            templateURL: "../templates/RichPopupTemplate.html",
-            // moustache template for notification popup
-            template: null,
-            animationDirection: "bottom",
-            // Speed of slide animation in milliseconds
-            animationSpeed: 1000,
+            // moustache template URL for notification popup
+            templateURL: donkyCore.installDir + "templates/RichPopupTemplate.html",
+            // moustache template for notification popup - use this if you want to specify an inline template
+            template: null,            
             // URL for bootstrap css - use cdn as below or host yourself
             bootstrapCssUrl: "https://netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css",
             // URL for jquery - use cdn as below or host yourself
             jqueryJsUrl: "https://code.jquery.com/jquery-2.1.1.min.js",
             // iframe css - has responsive positional info in it
-            iframeCssUrl: "../css/DonkyRichPopupIframe.css",
+            iframeCssUrl: donkyCore.installDir + "css/DonkyRichPopupIframe.css",
             // the id to use for creating the iframe
             iframeId: "donkyRichPopupIframe",
             // Boolean to determine whether donkyRichPopupUI should delete the rich message when close button is pressed
@@ -96,7 +93,7 @@
                 // Any queued up to render ?
                 var nextRichMessage = donkyRichLogic.getNextUnreadRichMessage();
 
-                if (nextRichMessage != null) {
+                if (nextRichMessage !== null) {
                     this.renderRichPopup(nextRichMessage);
                 }
             },
@@ -121,27 +118,26 @@
                     popupCSS += "<style type='text/css'>" + defaults.popupCSS + "</style>";
                 }
 
+                /*jshint multistr: true */
                 var iframeTemplate =
-                    "<!DOCTYPE html>\
-                        <html lang='en'> \
-                        <head>\
-                        <meta charset='utf-8' />\
-                        <meta http-equiv='X-UA-Compatible' content='IE=edge'/>\
-                        <meta name='viewport' content='width=device-width, initial-scale=1' />\
-                        <title>Donky Rich Message</title>\
-                        <link href='" + defaults.bootstrapCssUrl + "'  rel='stylesheet' type='text/css'  />\
-                        <script src='" + defaults.jqueryJsUrl + "' type='text/javascript'></script>"
-                        + popupCSS +
-                        "</head>\
-                        <body><div id='pushMessageContainer' style='position:absolute;width: 100%;'>" + html + "</div></body>\
-                        <script>\
-                            $(function(){\
-                                $('.popupClose').click(function(){\
-                                    window.parent.$(window.parent.document).trigger('DonkyRichPopupClosed', [$(this).data('message-id'), $(this).text()]);\
-                                });\
-                            });\
-                        </script>\
-                        </html>";
+"<!DOCTYPE html>\
+    <html lang='en'> \
+    <head>\
+    <meta charset='utf-8' />\
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'/>\
+    <meta name='viewport' content='width=device-width, initial-scale=1' />\
+    <title>Donky Rich Message</title>\
+    <link href='" + defaults.bootstrapCssUrl + "'  rel='stylesheet' type='text/css'  />\
+    <script src='" + defaults.jqueryJsUrl + "' type='text/javascript'></script>" + popupCSS + "</head>\
+    <body><div id='pushMessageContainer' style='position:absolute;width: 100%;'>" + html + "</div></body>\
+    <script>\
+        $(function(){\
+            $('.popupClose').click(function(){\
+                window.parent.$(window.parent.document).trigger('DonkyRichPopupClosed', [$(this).data('message-id'), $(this).text()]);\
+            });\
+        });\
+    </script>\
+</html>";
 
                 $("body").append("<iframe id='" + defaults.iframeId + "' seamless='seamless' frameborder='0' scrolling='no' ></iframe>");
             
@@ -164,12 +160,12 @@
                 // Hide unread the badge count if it is zero - also we are not marking as read until this popup is closed
                 // otherwise it won't survive a page reload
                 var unreadCount = messageCount.unreadRichMessageCount - 1;
-                if (unreadCount == 0) {
+                if (unreadCount === 0) {
                     unreadCount = "";
                 }
 
                 var model = {
-                    AvatarUrl: (message.avatarAssetId != null && message.avatarAssetId != "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : "",
+                    AvatarUrl: (message.avatarAssetId !== null && message.avatarAssetId !== "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : "",
                     MessageId: message.messageId,
                     SenderDisplayName: message.senderDisplayName,
                     Body: !donkyMessagingCommon.isExpired(message.expiryTimestamp) ? message.body : message.expiredBody,
@@ -190,24 +186,22 @@
                 }
             }
         };
-
 		
-        // donkyRichLogic
-		//====================
-
 		/**
-		 * @class
-		 * @name DonkyRichPopupUI
+		 * @class DonkyRichPopupUI
 		 */
 		function DonkyRichPopupUI() {
             var module = {  
                 name: "DonkyRichPopupUI", 
-                version:"2.0.0.0" 
+                version: "2.0.1.0" 
             };
 
             donkyCore.registerModule(module);
 		}
 
+        /**
+         *  @memberof DonkyRichPopupUI 
+         */
 	    DonkyRichPopupUI.prototype = {
 
             /**

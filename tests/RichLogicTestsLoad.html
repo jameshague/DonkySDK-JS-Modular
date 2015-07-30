@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Unit / Integration tests</title>
+	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>       
+	<script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>       
+
+    <script src="../modules/core/donkyData.js" data-cover></script>
+    <script src="../modules/core/donkyAccount.js" data-cover></script>
+    <script src="../modules/core/donkyLogging.js" data-cover></script>
+    <script src="../modules/core/donkyNetwork.js" data-cover></script>
+    <script src="../modules/core/donkyCore.js" data-cover></script>
+
+    <script src="../modules/coreAnalytics/donkyCoreAnalytics.js" data-cover></script>
+    <script src="../modules/automation/donkyAutomation.js" data-cover></script>
+	<script src="../modules/messaging/common/logic/donkyMessagingCommon.js" data-cover></script>
+    <script src="../modules/messaging/rich/logic/donkyRichLogic.js" data-cover></script>
+    
+    
+    <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-1.17.1.css">
+    <script src="https://code.jquery.com/qunit/qunit-1.17.1.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-mockjax/1.5.3/jquery.mockjax.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/blanket.js/1.1.4/blanket.min.js"></script>
+	
+  </head>
+  <body>
+
+	<div id="qunit"></div>
+	<div id="qunit-fixture"></div>
+
+  
+<script>
+
+    var apikey = ">>ENTER API KEY HERE<<";
+
+
+    var userDetails = {
+        id: "johnsmith",
+        displayName: "John Smith",
+        firstName: "John",
+        lastName: "Smith",
+        emailAddress: "john.smith@hotmail.co.uk",
+        countryCode: "GBR",
+        phoneNumber: "07979497000",
+    };
+    
+    
+    var messageCount = 1000;
+    
+
+    var deviceDetails = {
+        type: "donkyWebApp",
+        name: "donky",
+    };
+
+    function resetDonky(){
+        // TODO: robustify secret population if it is deleted 
+        // Persist the device Id & saecret
+        var deviceId = localStorage.getItem("donky.net.core.deviceId");
+        var secret = localStorage.getItem("donky.net.core.secret");
+        localStorage.clear();
+        localStorage.setItem("donky.net.core.deviceId", deviceId);
+        localStorage.setItem("donky.net.core.secret", secret);
+    }
+    
+    var myModule = {
+        name: "RichLogicUnitTest",
+        version: "2.0.0.0"
+    };
+    
+
+    function initializeDonky( reset, userDetails, deviceDetails, callback, apiKey ){
+        
+        if(reset) {
+            resetDonky();
+        }
+        
+        donkyCore.donkyNetwork._useSignalR(false);
+            
+        donkyCore.initialise({
+            
+            apiKey: apiKey === undefined ? apikey1 : apiKey,    
+            userDetails: userDetails,
+            deviceDetails: deviceDetails,
+            appVersion : "1.9.6.9",
+            resultHandler: function(result) {                    
+                callback(donkyCore, result);
+            }
+        });
+    }
+    
+    function daysBetween(first, second) {
+    
+        // Copy date parts of the timestamps, discarding the time parts.
+        var one = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+        var two = new Date(second.getFullYear(), second.getMonth(), second.getDate());
+    
+        // Do the math.
+        var millisecondsPerDay = 1000 * 60 * 60 * 24;
+        var millisBetween = two.getTime() - one.getTime();
+        var days = millisBetween / millisecondsPerDay;
+    
+        // Round down.
+        return Math.floor(days);
+    }   
+    
+    
+    function createTestRichMessage(donkyCore, isExpired){
+        
+        var now = new Date();
+        var yesterday = new Date();;        
+        yesterday.setDate(now.getDate() - 1);
+        
+        return {
+    		"id" : donkyCore._uuid(),
+    		"type" : "RichMessage",
+    		"data" : {
+    			"messageType" : "Rich",
+    			"senderExternalUserId" : "ryjcn",
+    			"externalRef" : "test",
+    			"description" : "hello there",
+    			"canReply" : false,
+    			"canForward" : false,
+    			"canShare" : true,
+    			"urlToShare" : "http://dev-share.mobiledonky.com/lookup?id=si1if",
+    			"silentNotification" : false,
+    			"conversationId" : "TO6cJuDp/E6jfPGnz/HB8w:68960",
+    			"assets" : [],
+    			"senderAccountType" : "MessagingIdentity",
+    			"senderDisplayName" : "JS Network SDK ",
+    			"body" : "<!doctype html><html lang=en><head><meta charset=utf-8><title>blah</title></head><body><p>I'm the content</p></body></html>",
+    			"messageScope" : "A2P",
+    			"senderInternalUserId" : "43c0a033-6b82-4838-bc2f-06187dc7ef88",
+    			"senderMessageId" : "TO6cJuDp/E6jfPGnz/HB8w:9768234",
+    			"messageId" : donkyCore._uuid(),
+    			"contextItems" : {
+    				"ExternalRef" : "test",
+    				"ExternalId" : "CampaignId:68960"
+    			},
+    			"avatarAssetId" : "aaf00fe2-a299-4d0e-bbe8-2065a90fc06c|avatar|NE_DEV_RC1_RG1",
+    			"sentTimestamp" : now.toISOString(),
+                "expiryTimeStamp" : isExpired ? yesterday.toISOString() : undefined
+    		},
+    		"createdOn" : now.toISOString()
+    	};        
+    } 
+        
+    QUnit.config.reorder = false;
+
+    /**
+     *
+     */
+    QUnit.testStart(function( details ) {
+        console.log( "%c Now running: " + details.module + details.name, 'background: #222; color: #bada55' );
+    });
+
+    /**
+     *
+     */
+    QUnit.testDone(function( details ) {   
+        console.log( "%c Finished running: " + details.module + details.name, 'background: #222; color: #bada55' );
+        // Need to reset mockjax after test to prevent pollution ...
+        $.mockjaxClear();
+    });
+
+
+
+    QUnit.module( "Rich logic tests" );
+
+    /**
+     * 2 Messages sent, one is expired on receipt and should be binned off ?
+     */
+    QUnit.test("Test Receiving " + messageCount + " messages", function(assert) {
+        var synchroniseCount = 0; 
+        var sniffShareCount = 0;                
+        var done = assert.async();
+
+        function SignalRStarted(){
+            donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+
+            // turn off signalr to force sync over rest api
+            donkyCore.donkyNetwork._stopSignalR(function() {
+                donkyCore.donkyNetwork._useSignalR(false);
+                initTest();
+            });                     
+        }
+/*
+        function sniffMessageReceived(notification){
+            console.log("%c " + JSON.stringify(notification), 'color: blue');
+            
+            assert.equal( notification.type, "MessageReceived", "notification.type should be MessageReceived" );
+            assert.equal( notification.messageType, "Rich", "notification.messageType should be Rich" );
+            
+            assert.equal( notification.acknowledgementDetail.result, "Delivered", "acknowledgementDetail.result should be Delivered" );
+            assert.equal( notification.acknowledgementDetail.type, "RichMessage", "acknowledgementDetail.type should be RichMessage" );                          
+        } 
+        
+        function sniffMessageRead(notification){
+            console.log("%c " + JSON.stringify(notification), 'color: blue');
+            
+            assert.equal( notification.type, "MessageRead", "notification.type should be MessageRead" );
+            assert.ok( notification.timeToReadSeconds >= 0, "notification.type should be MessageRead" );
+            assert.equal( notification.messageScope, "A2P", "notification.messageScope should be A2P" );
+        }  
+
+        // there is an assumption that this is the LAST pending client notification - (which it is) 
+        function sniffMessageShared(notification){
+            sniffShareCount++;
+            console.log("%c " + JSON.stringify(notification), 'color: blue');
+            
+            assert.equal( notification.type, "MessageShared", "notification.type should be MessageShared" );
+            assert.equal( notification.messageType, "Rich", "notification.messageType should be Rich" );
+            assert.equal( notification.messageScope, "A2P", "notification.messageScope should be A2P" );
+            assert.equal( notification.sharedTo, "FACEBOOK", "notification.sharedTo should be FACEBOOK" );
+            
+            if(sniffShareCount == 6){
+                donkyCore.unsubscribeFromOutboundNotifications(myModule, [{ 
+                        notificationType: "MessageReceived", 
+                        handler: sniffMessageReceived 
+                    }, 
+                    { 
+                        notificationType: "MessageShared", 
+                        handler: sniffMessageShared 
+                    }, 
+                    { 
+                        notificationType: "MessageRead", 
+                        handler: sniffMessageRead 
+                    }, 
+                    { 
+                        notificationType: "Acknowledgement", 
+                        handler: sniffAcknowledgement 
+                    }]);
+                    
+                    done();
+                
+            }
+        }
+         */
+
+        function  sniffAcknowledgement(notification){
+            console.log("%c " + JSON.stringify(notification), 'color: red');
+            assert.equal( true, false, "Acknowledgement notification should not be in here" );
+        }  
+
+
+
+        function runTest(event){
+            donkyCore.unsubscribeFromLocalEvent("NewRichMessagesReceived", runTest);
+            var messages = event.data;
+            assert.equal( messages.length, messageCount, "Should be " + messageCount + " messageS" );
+                                                
+            done();                        
+            /*var count = donkyRichLogic.getMessageCount();
+            
+            assert.equal( count.richMessageCount, 6, "Should be 6 messages" );
+            
+            var filtered1 = donkyRichLogic.filterRichMessages("FAIL");
+            
+            assert.equal( filtered1.length, 0, "Should be a zero" );
+
+            var filtered2 = donkyRichLogic.filterRichMessages("hello");
+            
+            assert.equal( filtered2.length, 6, "Should be 6" );
+            
+            
+            var expiry = new Date( donkyRichLogic.getRichMessageExpiryTimeStamp(filtered2[0]));
+            var now = new Date();
+            assert.equal( daysBetween(now, expiry) == 30, true, "Should be 30 days" );
+
+            var all = donkyRichLogic.getAllRichMessages();                           
+                           
+            var messageIdsToDelete = [];               
+            donkyCore._each(all, function(index, message){
+                
+                donkyRichLogic.markRichMessageRead(message.messageId);
+                donkyMessagingCommon.markMessageShared(message, "FACEBOOK")
+                                
+                messageIdsToDelete.push(message.messageId);                
+            });                           
+            
+            donkyRichLogic.deleteRichMessages(messageIdsToDelete);
+                        
+            count = donkyRichLogic.getMessageCount();
+            
+            assert.equal( count.richMessageCount, 0, "Should be no messages" );*/
+        }
+
+        donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", runTest );
+
+        function initTest(){
+                   
+            $.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/notification/synchronise",
+                  response: function(settings) {
+                      
+                      switch(synchroniseCount++){
+                          // The first time we call exchange, return this ..
+                          case 0:                                                                              
+                            this.responseText = { serverNotifications : []};
+                            
+                            for(var i = 0 ; i < messageCount ; i++){
+                                    this.responseText.serverNotifications.push(createTestRichMessage(donkyCore, false));
+                            }
+
+                          break;
+                          
+                          // all subsequent exchangs, return this ..
+                          default: 
+                            this.responseText = { "serverNotifications" : [] };
+                          break;
+                      }
+                  } 
+            });
+            
+            donkyCore.donkyNetwork.synchronise(function(){});                        
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+        /*
+        donkyCore.subscribeToOutboundNotifications(myModule, [{ 
+                notificationType: "MessageReceived", 
+                handler: sniffMessageReceived 
+            }, 
+            { 
+                notificationType: "MessageShared", 
+                handler: sniffMessageShared 
+            }, 
+            { 
+                notificationType: "MessageRead", 
+                handler: sniffMessageRead 
+            }, 
+            { 
+                notificationType: "Acknowledgement", 
+                handler: sniffAcknowledgement 
+            }]);
+        */
+
+        initializeDonky(true, userDetails, deviceDetails, function(donkyCore, result) {
+            assert.ok( result.succeeded, "result.succeeded should be set to false" );
+        }, apikey);
+    });
+
+
+	
+</script>
+		
+  </body>
+</html>

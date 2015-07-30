@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Inbox</title>
+    <script src="https://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="../modules/require-config-debug.js"></script>
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <style type="text/css">
+        /*
+            This is the styling for the inbox container div. The two important styles are the position and the overflow.
+            Position needs to be set to relative, fixed or absolute as the inbox relies on this for sizing internal elements. 
+            Also the overflow need to be set to hidden.
+        */
+        #richInboxPanel{
+            width:400px;
+            height:400px;
+            overflow:hidden;
+            position:absolute;
+            top:10px;
+            right:10px;
+            box-shadow: 0px 5px 20px 5px #CCC;
+        }
+      </style>
+</head>
+<body>
+    
+	<div id="logPanel"></div>
+    <div id="richInboxPanel"></div>	
+    <script>
+    $(function() {
+      // Handler for .ready() called.
+    
+        // create jQuery object for logPanel and cache it 
+        var $logPanel = $("#logPanel");
+        // function to perform logging
+        function log(message) {
+            $logPanel.append("<pre>"+message+"</pre>");
+        }
+        
+        /*
+            use require.js to pull in the required donky modules:
+            
+            donkyCore - need this to do anything
+            
+            donkyRichInboxUI - this module implements the rich Inbox
+            
+            donkyCoreAnalytics - this module implements some basic analytics (just need to create it)
+        
+        */
+        require(['donkyRichInboxUI','donkyCore', 'donkyCoreAnalytics'],function(donkyRichInboxUI, donkyCore, donkyCoreAnalytics) {
+
+            // Initialise donkyCore
+            donkyCore.initialise({
+                
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+                    
+                     
+                    if(result.succeeded) {
+                        // log the userId into the logPanel div so we can see who to send a message to
+                        var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                        log("Send rich message from campaign Builder to \""+registrationDetails.userDetails.id+"\"");
+
+                        // Initialise the richInbox module. We are simply telling it to use the div richInboxPanel in this page as its container and that we are not running in an iframe
+                        // Pay attention to the styling of this div - have made some comments in the head section
+                        donkyRichInboxUI.initialise({containerId: "#richInboxPanel", iFrameId: null});
+						
+                    }else{
+                        // Failure - log out the result object as it will contain an error message
+                        log(JSON.stringify(result));
+    				}
+                }
+            });
+        });
+    });
+    </script>
+</body>
+</html>

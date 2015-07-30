@@ -12,24 +12,12 @@ iframe styles
 	width:100%;
 	padding: 0;
 }
-@media (min-width: 768px) {
+
+@media (min-width: 640px) {
 	#donkySimplePushIframe{
-		position:fixed;
 		right:0;
-		top:50%;
-		z-index:1000;
-		width:40%;
-		padding: 20px 0 20px 20px;
-	}
-}
-@media (min-width: 1366px) {
-	#donkySimplePushIframe{
-		position:fixed;
-		right:0;
-		top:60%;
-		z-index:1000;
-		width:25%;
-		padding: 20px 0 20px 20px;
+		top:70%;
+		width:450px;
 	}
 }
 

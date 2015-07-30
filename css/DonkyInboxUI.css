@@ -1,0 +1,570 @@
+
+ .shadow{
+	-webkit-box-shadow: 0px 0px 10px 0px #888;
+	-moz-box-shadow: 0px 0px 10px 0px #888;
+	box-shadow: 0px 0px 10px 0px #888;
+ }
+
+.noselect {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+.hideOverflow
+{
+	overflow:hidden;
+	white-space:nowrap;
+	text-overflow:ellipsis;
+}
+
+ .headerLogo{
+	width: 110px;
+	background-image: url("../Images/Donky_messenger_logo.png");
+	height: 35px;
+	background-size: 70%;
+	background-repeat: no-repeat;
+ }
+ 
+
+ .donkyInboxUI.panel, .donkyInboxUI .panel-heading{border-radius:0;border: none;}
+
+
+ .donkyInboxUI .list-group-item{
+	border-top: 1px solid #ccc;
+	border-left:none;
+	border-bottom: 1px solid #ccc;
+	border-right:none;
+	padding:10px;
+	cursor:pointer;
+ }
+ 
+.donkyInboxUI .donkyContainerIndex .donkyContainerIndexBadge{
+	
+}
+
+.donkyInboxUI .donkyContainerIndex .donkyContainerIndexName{
+	font-size: 16px;
+	font-weight: bold;
+	position: relative;
+	top: 6px;	
+}
+
+.donkyInboxUI .donkyContainerIndex .donkyContainerIndexButton{
+	color: black;
+}
+ 
+ 
+ .donkyInboxUI .list-group{
+	 background-color: transparent !important;
+ }
+ 
+ .donkyInboxUI .list-group-item.no-messages{
+	padding: 110px;
+	text-align: center;
+	border: none;
+	font-size: 20px;
+	color: #ccc;
+	cursor:default;
+	background-color: transparent !important;
+}
+
+.donkyInboxUI .list-group-item.no-messages:hover{
+	background-color: transparent !important;
+}
+
+ .donkyInboxUI .list-group-item.richMessage{
+	 padding:10px 10px 10px 0;
+ }
+
+
+.donkyInboxUI .list-group-item.richMessage.expired{
+    opacity: .5;
+    filter: alpha(opacity=50);	
+}
+
+ .donkyInboxUI .senderAvatarContainer{
+	 position:relative;
+ }
+
+ .donkyInboxUI .senderAvatarContainer img{
+	width:80px;
+	height:80px;
+ }
+
+
+.donkyInboxUI .newRichMessageBadgeContainer{
+	position: absolute;
+	top: 0px;
+	left: 0px;
+	width:80px;
+	text-align:center;
+	overflow: hidden;
+	height: 30px;
+	color:white;
+	text-transform:uppercase;
+	line-height:20px;
+ }
+ .donkyInboxUI .newRichMessageBadge{
+	height: 80px;
+	border-radius: 50%;
+	background-color: #1CA7DF;
+}
+
+ .donkyInboxUI .newRichMessageBadge span{
+	margin-top: 6px;
+	display: inline-block;
+	font-weight: bold;
+ }
+
+ .donkyInboxUI .checkbox{
+	 margin-top:0;
+	position: relative;
+	left: 4px;
+	top:-5px;
+ }
+
+
+.donkyInboxUI .panel-title{
+	text-transform: uppercase;
+	font-weight: bold;
+}
+
+.donkyInboxUI .navbar-toggle .icon-bar{
+	background-color: white;
+}
+
+/* Needed for iOS otherwise you cant navigate */
+.donkyInboxUI .browseRichInbox,
+.donkyInboxUI .richMessage{
+	cursor:pointer;
+}
+
+
+.donkyInboxUI.panel{
+	margin-bottom:0; 
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: inherit;	 
+}
+
+.donkyInboxUI .panel-body{
+	 padding:0px;      
+	 position:relative;       
+}
+
+.donkyInboxUI .richMessage .senderAvatar{
+	height:92px;
+	width:92px;
+	position: relative;
+	top: 3px;
+	left: 5px;
+}
+
+
+.donkyInboxUI .circle{
+	position: relative;
+	display:inline-block;
+	width: 30px;
+	height: 30px;
+	border-radius: 100%;
+	background-color:#222 ;
+	text-align:center;
+}
+
+.donkyInboxUI .circle .glyphicon{
+	line-height:30px;
+	color:white;  
+}
+
+.donkyInboxUI .circle i.fa{
+	line-height:30px;
+	color:white;  
+	font-size:20px;          
+}
+
+
+.donkyInboxUI .list-group .list-group-item:hover{background-color:#E3E4E3;}
+
+.donkyInboxUI .list-group-item:first-child{
+	border-top-right-radius: 0px;
+	border-top-left-radius: 0px;
+}
+.donkyInboxUI .list-group-item:last-child {
+	border-bottom-right-radius: 0px;
+	border-bottom-left-radius: 0px;
+}
+
+.donkyInboxUI .panel-body .search-wrapper{
+	padding:10px 10px;position:relative;
+}
+
+.donkyInboxUI .panel-body .search-wrapper .glyphicon-search{
+	position:absolute;
+	left:20px;
+	top:20px;
+	color:grey;
+}
+
+.donkyInboxUI .panel-body .search-wrapper .glyphicon-remove{
+	position:absolute;
+	right:20px;
+	top:20px;
+	color:grey;
+}
+
+
+.donkyInboxUI .search-wrapper input[type=text]{
+	padding-left:30px;
+}
+
+.donkyInboxUI input[type=text]{
+	display:inline-block;
+	border-radius: 30px;
+}
+
+#resetRichInboxFilter{cursor:pointer;}
+
+.donkyInboxUI input[type=checkbox]{
+	vertical-align: middle;
+}
+
+.donkyInboxUI button[type="submit"]{background-color:#26a7df !important;}
+
+.donkyInboxUI .sent{
+	color: #666;
+	font-size: 11px
+}
+
+
+.donkyInboxUI .img-circle{border: solid 1px #CCC;}
+
+
+.donkyInboxUI .circle .badge{
+	position: absolute;
+	background-color:#1CA7DF;
+	border: 2px solid white;
+	top:-10px;
+	left:-10px;
+	font-size: 10px;
+	padding: 3px 5px;
+}
+
+
+.donkyInboxUI .circle.avatar{
+	width: 90px;
+	height: 90px;
+}
+.donkyInboxUI .circle.avatar .glyphicon{
+	font-size: 60px;
+	line-height: 80px;
+}
+
+.donkyInboxUI .browseRichInbox{
+	padding-left:15px;
+}
+
+
+.donkyInboxUI .browseRichInbox span.glyphicon-chevron-right{
+	color:#26a7df !important;
+	line-height: 30px;
+	padding-right: 5px;
+}
+
+
+.donkyInboxUI .sent.unread{color:#1CA7DF;}
+
+
+.donkyInboxUI .richMessage
+{	
+	overflow: hidden;
+}
+
+.donkyInboxUI .richMessage .message-avatar-wrapper{
+	width:30%;
+	float:left;
+	height:100px;
+	vertical-align: middle;
+}
+.donkyInboxUI .richMessage .message-body-summary{
+	width:70%;
+	float:left;
+	height:100px;
+	overflow:hidden;
+}
+
+.donkyInboxUI .message-body-container{
+	padding:10px;
+}
+
+
+.donkyInboxUI .messageSender{
+	font-weight:bold;
+	font-size:14px;
+}
+
+
+.donkyInboxUI .messageSender em{
+	color:#1CA7DF;  
+	font-style: normal;
+}
+
+.donkyInboxUI .messageBody em{
+	font-weight:bold;
+	color:#1CA7DF;
+	font-style: normal;
+}
+
+
+.donkyInboxUI .richMessage .messageBody{
+	font-size:13px;
+	margin-top:2px;
+	height: 80px;            
+}
+
+#richMessage{width:100%;height:100%;border: none;}
+
+.donkyInboxUI .panel-heading{
+	background-color:#222 !important;
+	color:white !important;
+	height: 55px;
+}
+.donkyInboxUI .panel-heading a{color:white !important;}
+
+.donkyInboxUI .panel-heading .fa{font-size:20px;}
+
+/* For narrow mobile devices nee to drop the size as it wont fit */
+@media (max-width: 320px) {
+	.donkyInboxUI .panel-heading .fa{font-size:15px;}
+	.donkyInboxUI .panel-heading .btn{padding: 6px 10px;}
+}
+
+.donkyInboxUI .panel-title{
+	line-height: 34px;
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.donkyInboxUI .center-row {
+	width:100%;
+	display:table;
+    margin-left:0;
+    margin-right:0;
+}
+
+.donkyInboxUI .center {
+	display:table-cell;
+    vertical-align:middle;
+    float:none;
+}
+
+#richMessageContainer{
+	-ms-touch-action: pan-y;
+}
+
+#richInboxOverlay{
+	position: absolute;
+	top: 55px;
+	left: 0;
+	right: 0;	
+	bottom:0;
+	background-color: black;
+    opacity: .5;
+    filter: alpha(opacity=50);	
+	display: none;
+}
+	
+#richInboxExpiredMessagePopup{
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;	
+	margin: 100px 20px 100px 20px;
+	background-color: white;
+	border: 1px solid #ccc;
+	padding: 15px 30px 20px 30px;
+	display: none;
+}
+
+
+#richInboxExpiredMessagePopup a{
+	cursor:pointer;	
+	font-weight:bold;
+	color:#1CA7DF;
+}
+
+#richInboxExpiredMessagePopup a:hover{
+	cursor:pointer;	
+	text-decoration: none;
+}
+
+
+
+/* Can't scroll iframe with finger in iPad / iPhone without these classes ...*/
+
+/* ----------- iPad mini ----------- 
+ ----------- iPad 1 and 2 ----------- */
+/* Portrait and Landscape */
+@media only screen 
+  and (min-device-width: 768px) 
+  and (max-device-width: 1024px) 
+  and (-webkit-min-device-pixel-ratio: 1) {
+	#richMessageContainer{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
+}
+
+/* ----------- iPad 3 and 4 ----------- */
+/* Portrait and Landscape */
+@media only screen 
+  and (min-device-width: 768px) 
+  and (max-device-width: 1024px) 
+  and (-webkit-min-device-pixel-ratio: 2) {
+	#richMessageContainer{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
+}
+
+/* ----------- iPhone 4 and 4S ----------- */
+/* Portrait and Landscape */
+@media only screen 
+  and (min-device-width: 320px) 
+  and (max-device-width: 480px)
+  and (-webkit-min-device-pixel-ratio: 2) {
+	#richMessageContainer{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
+}
+
+/* ----------- iPhone 5 and 5S ----------- */
+/* Portrait and Landscape */
+@media only screen 
+  and (min-device-width: 320px) 
+  and (max-device-width: 568px)
+  and (-webkit-min-device-pixel-ratio: 2) {
+	#richMessageContainer{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
+}
+
+/* ----------- iPhone 6 ----------- */
+/* Portrait and Landscape */
+@media only screen 
+  and (min-device-width: 375px) 
+  and (max-device-width: 667px) 
+  and (-webkit-min-device-pixel-ratio: 2) { 
+	#richMessageContainer{overflow-y:scroll;-webkit-overflow-scrolling:touch;}
+}
+
+
+
+#richInboxListContainer{
+	overflow-y: auto;
+}
+
+
+
+.donkyInboxUI #richInboxListContainer:not(.editMode) .checkboxColumn{
+	display:none;
+}
+.donkyInboxUI #richInboxListContainer:not(.editMode) .avatarColumn{
+}
+.donkyInboxUI #richInboxListContainer:not(.editMode) .descriptionColumn{
+	width:75% !important;
+}
+
+
+.donkyInboxUI #richInboxListContainer.editMode .checkboxColumn{
+}
+.donkyInboxUI #richInboxListContainer.editMode .avatarColumn{
+}
+.donkyInboxUI #richInboxListContainer.editMode .descriptionColumn{
+}
+
+
+#richInboxListContainer .richMessage .row div[class^="col-"]
+{
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+
+#richMessageControls
+{
+    display:none;
+    position:absolute;
+    bottom:0px;
+	width:100%;
+    padding: 0 20px;
+
+    background-color:#E6E7E8;
+	z-index:100000;
+}
+
+#richMessageControlsClose{
+	position: absolute;
+	top:10px;
+	right:10px;
+	cursor:pointer;
+	font-size:15px;
+}
+
+.donkyInboxUI .justifyContainer
+{
+    text-align: justify;
+    -ms-text-justify: distribute-all-lines;
+    text-justify: distribute-all-lines;
+    white-space: normal;
+}
+
+
+.donkyInboxUI .stretch {
+    width: 100%;
+    display: inline-block;
+    font-size: 0;
+    line-height: 0
+}
+
+
+.donkyInboxUI .share-icon{
+	position: relative;
+	width: 40px;
+	height: 40px;
+	border-radius: 100%;
+	text-align:center;	
+	cursor:pointer;
+	display: inline-block;
+	vertical-align: top;
+}
+
+.donkyInboxUI .share-icon i.fa{
+	line-height:40px;
+	color:white;  
+	font-size:25px;          
+}
+
+
+.donkyInboxUI .google-plus{
+	background-color: #dd4b39;
+}
+.donkyInboxUI .google-plus:hover{
+	background-color: #b5362c;
+}
+
+.donkyInboxUI .facebook{
+	background-color: #3b5998;
+}
+.donkyInboxUI .facebook:hover{
+	background-color: #263b6d;
+}
+
+.donkyInboxUI .twitter{
+	background-color: #00aced;
+}
+.donkyInboxUI .twitter:hover{
+	background-color: #048db7;
+}
+
+.donkyInboxUI .envelope{
+	background-color: #878786;
+}
+.donkyInboxUI .envelope:hover{
+	background-color: #666666;
+}
+

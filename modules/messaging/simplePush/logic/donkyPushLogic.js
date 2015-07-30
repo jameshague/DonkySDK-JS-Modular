@@ -6,7 +6,7 @@
  */
 
 (function () {
-	var factory = function (donkyCore, donkyMessagingCommon) {
+	var factory = function (donkyCore, donkyMessagingCommon, Mustache) {
 
 	    if (donkyCore === undefined) {
 	        throw new Error("Missing donkyCore");
@@ -18,7 +18,29 @@
 
 
 		var donkyPushLogic;
-
+                        
+        var defaults = { 
+            // The title for a new device notification - This is a Mustache template - {{operatingSystem}} and {{model}} can be used within the template.   
+            newDeviceTitleTemplate : "New {{operatingSystem}} Device ?",
+            // The message body for a new device notification - This is a Mustache template - {{operatingSystem}} and {{model}} can be used within the template.
+            newDeviceBodyTemplate : "A new {{operatingSystem}} device ({{model}}) has been registered against your account; if you did not register this device please let us know immediately",
+            // Boolean to control whether to display the new device popup (default is true)
+            showNewDeviceWarning: true,
+            // Boolean to control whether to display the new Rich Message popup if inbox ix in closed state (default is true)
+            showRichMessagePopup: true,
+            // The title for a new rich message notification - This is a Mustache template - {{SenderName}} can be used within the template.
+            // Note: the message body will be the rich message desacription. 
+            richMessagePopupTitle: "New: <em>{{SenderName}}</em>",
+            // The title for multiple new rich messages notification
+            richMessagesPopupTitle: "<em>{{Count}}</em> New Messages",
+            // The body for multiple new rich messages notification
+            richMessagesPopupBody: "You have received {{Count}} new messages. Would you like to view them now?",
+            // Button text for the dismiss button
+            richMessagePopupDismissText: "Dismiss",
+            // Button text for the view messgae button (clicking this button opens the inbox on the message)
+            richMessagePopupViewText: "View"
+        };
+        
 		/**
 		 * Helper object to perform management functions  
 		 */
@@ -29,7 +51,7 @@
 			 */
 		    load: function(){
 			    var pushMessages = donkyCore.donkyData.get("pushMessages");	
-			    if(pushMessages == null){
+			    if(pushMessages === null){
 				    pushMessages = [];
 			    }
 			    return pushMessages;
@@ -40,6 +62,12 @@
 			 */
 		    save: function(pushMessages){
 			    donkyCore.donkyData.set("pushMessages", pushMessages);
+		    },
+			/**
+			 * Function to remove ALL the current push notifications.
+			 */
+            removeAll: function(){
+			    donkyCore.donkyData.remove("pushMessages");
 		    },
 			/**
 			 * Function to add a new push notification to the message store. The current store is checked incase this is a duplicate prior to storing.
@@ -78,9 +106,7 @@
 
 		        if (index !== -1) {
 		            // remove from array
-                    donkyCore.donkyLogging.debugLog("Removing ... " + pushMessages.length);
 		            pushMessages.splice(index, 1);
-                    donkyCore.donkyLogging.debugLog("Removed ..."  + pushMessages.length);
 		            this.save(pushMessages);
 		        } else {
                     donkyCore.donkyLogging.warnLog("Failed to find push Message");
@@ -114,7 +140,6 @@
 			    $.each(pushMessages, function(index,item){
 				    if(item.id == id){
 					    found = index;
-					    donkyCore.donkyLogging.infoLog("Found message in position " + index);
 				    }
 				    return found == -1;
 			    });
@@ -154,6 +179,23 @@
                 if (deletedCount > 0) {
                     this.save(pushMessages);
                 }            
+            },
+			/**
+			 * Function to iterate through the message store and delete messages with matching the creator field.
+			 */
+            removeMessagesByCreator: function(creator) {
+			    var pushMessages = this.load();
+                var deletedCount = 0;
+                for (var i = pushMessages.length - 1; i >= 0; i--) {
+                    // true push messages don't have this field
+                    if( pushMessages[i].creator !== undefined && pushMessages[i].creator === creator){
+                        pushMessages.splice(i, 1);
+                        deletedCount++;
+                    }
+                }
+                if (deletedCount > 0) {
+                    this.save(pushMessages);
+                }            
             }
 	    };
 
@@ -162,19 +204,30 @@
 		 * Function to process the SimplePushMessage server notification. If message not expired, add to the message store and publish a local event which ui plugin listens for.
 		 * @param {Object} the push notification
 		 */
-        function processPush (notification) {
+        function processPushMessages (notifications) {
         
-		    var expired = donkyMessagingCommon.isExpired(notification.data.expiryTimestamp);
-
-            if (!expired) {                
-                if (_pushMessageManager.add(notification)) {
-                    donkyCore.publishLocalEvent({ type: "NewSimplePushMessagesReceived", data: {} });
+            var newMessages = [];
+            
+            donkyCore._each(notifications, function(index, notification){
+    		    var expired = donkyMessagingCommon.isExpired(notification.data.expiryTimeStamp);
+    
+                if (!expired) {                
+                    if (_pushMessageManager.add(notification)) {
+                        newMessages.push(notification);
+                    }
+                } else {
+                    donkyCore.donkyLogging.debugLog("Received expired message, binning off ...");
                 }
-            } else {
-                donkyCore.donkyLogging.debugLog("Received expired message, binning off ...");
-            }
-
-            donkyMessagingCommon.markMessageReceived(notification, expired);
+                
+                // Don't process dummy messages
+                if(notification.data.senderInternalUserId !== undefined){
+                    donkyMessagingCommon.markMessageReceived(notification, expired);    
+                }                           
+            });
+            
+            if(newMessages.length > 0){
+                donkyCore.publishLocalEvent({ type: "NewSimplePushMessagesReceived", data: newMessages });
+            }                        
         }
 
 
@@ -182,8 +235,7 @@
 		//====================
 
 		/**
-		 * @class
-		 * @name DonkyPushLogic
+		 * @class DonkyPushLogic
 		 */
 		function DonkyPushLogic() {
 
@@ -194,20 +246,158 @@
             donkyCore.subscribeToDonkyNotifications(
                 {
                     name: "DonkyPushLogic",
-                    version: "2.0.0.0",
+                    version: "2.1.0.0",
                 },
                 { 
                     notificationType: "SimplePushMessage",             
-                    handler: processPush
+                    batchHandler: processPushMessages
                 },
                 false);
+                
+            // this event is published from _register()
+            donkyCore.subscribeToLocalEvent("RegistrationChanged", function(event) {
+                _pushMessageManager.removeAll();
+            });        
+                                
+            // donkyPushUI can display a popup directing the user to the inbox 
+            
+            donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event){
+                var messages = event.data;
+                if(donkyCore.isModuleRegistered("DonkyRichInboxUI") ){    
+                    
+                    // any non - silent notifications ?
+                    var silent = true;
+                    donkyCore._each(messages, function(index, message){
+                        if(!message.silentNotification){
+                            silent = false;
+                        }
+                    });
+                                                            
+                    if(defaults.showRichMessagePopup && !silent){
+                        var containerService = donkyCore.getService("donkyInboxContainerUIService");
+                        var donkyRichLogic = donkyCore.getService("donkyRichLogic");
+                        
+                        if (donkyRichLogic !== null && containerService !== null && !containerService.isOpen()) {
+        
+                            var dummy;
+                            
+                            if(messages.length == 1){
+                                dummy = {
+                                    creator: "newRichMessages",
+                                    id: messages[0].serverNotificationId,
+                                    type: "SimplePushMessage",
+                                    data: {
+                                        messageType: "SimplePush",
+                                        avatarAssetId: messages[0].avatarAssetId,
+                                        buttonSets: [
+                                            {
+                                                buttonSetId: null,
+                                                platform: "Web",
+                                                interactionType: "TwoButton",
+                                                buttonSetActions: [
+                                                    {
+                                                        actionType: "Javascript",
+                                                        data: null,
+                                                        label: defaults.richMessagePopupDismissText
+                                                    },
+                                                    {
+                                                        /*Javascript*/
+                                                        actionType: "Javascript",
+                                                        /*code to execute*/
+                                                        data: btoa("$(document).trigger('ViewRichMessage', ['" + messages[0].messageId + "']);"),
+                                                        label: defaults.richMessagePopupViewText
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
+                                        body: messages[0].description,
+                                        expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
+                                    },
+                                    "createdOn": messages[0].sentTimestamp
+                                };
+                            }else{
+                                dummy = {
+                                    creator: "newRichMessages",
+                                    id: donkyCore._uuid(),
+                                    type: "SimplePushMessage",
+                                    data: {
+                                        messageType: "SimplePush",
+                                        avatarAssetId: null,
+                                        buttonSets: [
+                                            {
+                                                buttonSetId: null,
+                                                platform: "Web",
+                                                interactionType: "TwoButton",
+                                                buttonSetActions: [
+                                                    {
+                                                        actionType: "Javascript",
+                                                        data: null,
+                                                        label: defaults.richMessagePopupDismissText
+                                                    },
+                                                    {
+                                                        /*Javascript*/
+                                                        actionType: "Javascript",
+                                                        /*code to execute*/
+                                                        data: btoa("$(document).trigger('ViewRichInbox');"),
+                                                        label: defaults.richMessagePopupViewText
+                                                    }
+                                                ]
+                                            }
+                                        ],
+                                        senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
+                                        body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
+                                        expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
+                                    },
+                                    "createdOn": messages[0].sentTimestamp
+                                };
+                                
+                            }   
+                            
+                            processPushMessages([dummy]);                 
+        
+                        }
+                    }
+                }                
+            });   
+            
+            donkyCore.subscribeToLocalEvent("NewDeviceAddedToUser", function(event){
+                var message = event.data;
+                if(defaults.showNewDeviceWarning){
+                    
+                    var dummy = {
+                        creator: "newDeviceWarning",
+                        id: message.id,
+                        type: "SimplePushMessage",
+                        data: {
+                            messageType: "SimplePush",
+                            avatarAssetId: null,
+                            buttonSets: [],
+                            senderDisplayName: Mustache.to_html(defaults.newDeviceTitleTemplate, message.data),
+                            body: Mustache.to_html(defaults.newDeviceBodyTemplate, message.data)
+                        },
+                        "createdOn": message.createdOn
+                    };
+    
+                    processPushMessages([dummy]);                                    
+                }                
+            });             
 		}
 
+        /**
+         *  @memberof DonkyPushLogic 
+         */
 		DonkyPushLogic.prototype = {
-
+            /**
+             * Function to set companion notification options (optional)
+			 * @param {Object} settings - intergrators settings to optionally overide any of the defaults 
+             */
+			setCompanionNotificationOptions: function(settings){
+                donkyCore._extend(defaults, settings);
+            },
             /**
 	         *  Get the next simple push message
-             *  
+             *  @returns {PushMessage} - the simple push message. 
 	         */
 	        getNextSimplePush : function() {
 		
@@ -221,6 +411,13 @@
 	        },
 
 	        /**
+	         *  Deletes the message (used for dummy messages)
+             *  @param {String} id - The message id
+	         */
+            deleteMessage : function(id){
+                _pushMessageManager.remove(id);
+            },
+	        /**
 	         *  Queue the client notification "InteractionResult" based on which button has been pressed
              *  @param {String} id - The message id
              *  @param {String} buttonText - The button text 
@@ -229,14 +426,17 @@
 
                 var pushMessage = _pushMessageManager.findObj(id);
 
-                if (pushMessage != null) {
+                if (pushMessage !== null) {
 
                     // remove 			
                     _pushMessageManager.remove(id);
 
                     var data = pushMessage.data;
 
-                    if (buttonText != "") {
+                    // only report button clicks (ButtonA, ButtonB) - if dismissed don't report anything
+                    // dummy messages that don't come from donky have a creator property - ignore these
+
+                    if (buttonText !== "" && (pushMessage.creator === undefined || pushMessage.creator === null)) {
                         var webButtonSet = {};
 
                         $.each(data.buttonSets, function(index, buttonSet) {
@@ -287,7 +487,8 @@
                             userAction: userAction,
                             operatingSystem: "Web",
                             messageSentTimestamp: data.msgSentTimeStamp,
-                            contextItems: data.contextItems };
+                            contextItems: data.contextItems 
+                        };
 
                         donkyCore.queueClientNotifications(clientNotification);
 
@@ -299,7 +500,7 @@
 
             /**
 	         * Get counts of all messages
-             *  
+             * @returns {Number} - the message count.  
 	         */
             getMessageCount : function() {
                 
@@ -314,22 +515,35 @@
 		        }
 
                 return null;
+            },
+            /**
+	         * Deletes push messages by creator field. Some push messages don't originate from donky network - they are created on-the-fly.
+             * i.e. a popup to tell the user that there is a new rich mesage available. These messages have a creator property added to them so we can filter them out if necessary.
+             * If we want to remove all of these we can use this method.
+             * 
+             * @param{String} creator - the creator of the pseudo push message (newRichMessages, newDeviceWarning etc...)
+	         */
+            deleteMessagesByCreator : function(creator){
+                _pushMessageManager.removeMessagesByCreator(creator);
             }
 		};
 
 		// "static" instance
 		donkyPushLogic = new DonkyPushLogic();
+        
+        // make this available to other modules via the service mechanism
+        donkyCore.registerService("donkyPushLogic", donkyPushLogic);        
 
 		return donkyPushLogic;
 	};
 
 	if (typeof define === 'function' && define.amd) {
-		define('donkyPushLogic', ['donkyCore', 'donkyMessagingCommon'], function(donkyCore, donkyMessagingCommon) {
-            return factory(donkyCore, donkyMessagingCommon);
+		define('donkyPushLogic', ['donkyCore', 'donkyMessagingCommon', 'Mustache'], function(donkyCore, donkyMessagingCommon, Mustache) {
+            return factory(donkyCore, donkyMessagingCommon, Mustache);
         });
 	} else {
 		/*jshint sub:true */
-		window['donkyPushLogic'] = factory(window.donkyCore, window.donkyMessagingCommon);
+		window['donkyPushLogic'] = factory(window.donkyCore, window.donkyMessagingCommon, window.Mustache);
 	}
 
 }());

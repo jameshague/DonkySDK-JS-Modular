@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <title>Unit / Integration tests</title>
 	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>       
-	<script src="https://cdn.dnky.co/sdk/2.0.0.0/dependencies/jquery.signalR-2.2.0.min.js"></script>       
+	<script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>       
 
     <script src="../modules/core/donkyData.js" data-cover></script>
     <script src="../modules/core/donkyAccount.js" data-cover></script>
@@ -29,8 +29,8 @@
   
 <script>
 
-    var apikey1 = ">>>ENTER API KEY<<<";
-    var apikey2 = ">>>ENTER API KEY<<<";
+    var apikey1 = ">>ENTER API KEY HERE<<";
+    var apikey2 = ">>ENTER API KEY HERE<<";
 
 
     var defaultUserDetails = {
@@ -92,6 +92,7 @@
         }
             
         donkyCore.initialise({
+            
             apiKey: apiKey === undefined ? apikey1 : apiKey,    
             userDetails: userDetails,
             deviceDetails: deviceDetails,
@@ -440,10 +441,10 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
             var url = donkyCore.formatAssetUrl("myId");
-            assert.equal( url, "https://client-api.mobiledonky.com/asset/myId", "Expect value to be \"https://client-api.mobiledonky.com/asset/myId\"" );
+            assert.equal( url, "https://dev-client-api.mobiledonky.com/asset/myId", "Expect value to be \"https://dev-client-api.mobiledonky.com/asset/myId\"" );
 
             url = donkyCore.formatAssetDownloadUrl("myId","myName");
-            assert.equal( url, "https://client-api.mobiledonky.com/download/myId/myName", "Expect value to be \"https://client-api.mobiledonky.com/download/myId/myName\"" );
+            assert.equal( url, "https://dev-client-api.mobiledonky.com/download/myId/myName", "Expect value to be \"https://dev-client-api.mobiledonky.com/download/myId/myName\"" );
 
             done();            
         });
@@ -541,6 +542,7 @@
         resetDonky();
             
         donkyCore.initialise({
+            
             appVersion : "1.9.6.9",
             resultHandler: function(result) {                    
                 assert.ok( !result.succeeded, "result.succeeded should be set to false" );
@@ -576,6 +578,7 @@
         var done = assert.async();
 
         donkyCore.initialise({
+            
             apiKey: apikey1, 
             appVersion : "1.9.6.9"
         });
@@ -631,7 +634,7 @@
     QUnit.test("test _refreshToken with a mocked user suspension", function(assert) {
 
         $.mockjax({
-            url: "https://client-api.mobiledonky.com/api/authentication/gettoken",
+            url: "https://dev-client-api.mobiledonky.com/api/authentication/gettoken",
             status: 403,
             responseText: null
         });
@@ -721,7 +724,7 @@
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
 
             $.mockjax({
-                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration/user",
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
                 responseText: null
             });
 
@@ -770,7 +773,7 @@
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
                 
             $.mockjax({
-                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration/device",
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/device",
                 responseText: null
             });
 
@@ -855,7 +858,7 @@
             };
                 
             $.mockjax({
-                url: "https://client-secure-api-northeurope.mobiledonky.com/api/registration",
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration",
                 responseText: null
             });
 
@@ -924,6 +927,114 @@
 
    /** Queue custom notification and process it  
     */
+    QUnit.test("Queue / subscribe to ContentNotifications Batch Mode Integration Test", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+        
+            function cleanup(){
+                assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+                // leave in a good state for next test - stop signalR                    
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+
+
+            function changeColourHandler(notifications){
+                
+                assert.equal( notifications.length, 1, "Expect newColour to be #CDE" );
+                var notification = notifications[0];
+                
+                assert.equal( notification.data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+                assert.equal( notification.data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+                donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", batchHandler: changeColourHandler}]);
+                
+                // I am inside a sync here so it will fail unless I do with a timeout ...
+                setTimeout(function() {
+                   cleanup();
+                }, 1000);
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", batchHandler: changeColourHandler});
+
+            var notification = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+
+            donkyCore.queueContentNotifications(notification);
+
+            // Need to synchronise to get it to send ;-)
+            donkyCore.donkyNetwork.synchronise();            
+        });
+    });
+    
+    // queue multiple messages of different types
+    QUnit.test("Queue / subscribe to ContentNotifications Batch Mode Integration Test 2", function(assert) {
+        var done = assert.async();
+
+        var receivedCount = 0;
+        
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+        
+            function cleanup(){
+                assert.equal( donkyCore._isPendingNotifications(), false, "Expect there to be no pending client notifications" );
+                // leave in a good state for next test - stop signalR                    
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                     
+            }
+
+
+            function changeColourHandler(notifications){
+                               
+                console.log("notifications contains " + notifications.length + " items");
+                receivedCount += notifications.length;
+                                 
+                var notification = notifications[0];
+                
+                assert.equal( notification.data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+                assert.equal( notification.data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+                
+                
+                if(receivedCount ==3){
+                    
+                    donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", batchHandler: changeColourHandler}]);
+                    
+                    // I am inside a sync here so it will fail unless I do with a timeout ...
+                    setTimeout(function() {
+                       cleanup();
+                    }, 1000);
+                    
+                }
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", batchHandler: changeColourHandler});
+
+            var notification1 = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+            var notification2 = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+            var notification3 = donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 });
+
+            donkyCore.queueContentNotifications([notification1, notification2, notification3]);
+
+            // Need to synchronise to get it to send ;-)
+            donkyCore.donkyNetwork.synchronise();            
+        });
+    });    
+
+
+   /** Queue custom notification and process it  
+    */
     QUnit.test("Queue / subscribe to ContentNotifications Integration Test over REST", function(assert) {
         var done = assert.async();
         
@@ -960,7 +1071,7 @@
             interval = setInterval(function(){
                 // Need to synchronise again to recieve the notification ;-)
                 donkyCore.donkyNetwork.synchronise();
-            },1000);
+            },10000);
         }
 
         function SignalRStarted(){
@@ -978,6 +1089,72 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
     });
+
+   /** Queue custom notification and process it  
+    */
+    QUnit.test("Queue / subscribe to ContentNotifications Batch MOde Integration Test over REST", function(assert) {
+        var done = assert.async();
+        var receivedCount = 0;
+        function doTest(){
+            var module = {
+                name: "demoApp",
+                version: "1.0.0.0",
+            };
+
+            var interval = null;
+
+            function changeColourHandler(notifications) {
+
+                receivedCount += notifications.length;
+                assert.equal( notifications[0].data.customData.newColour, "#CDE", "Expect newColour to be #CDE" );
+                assert.equal( notifications[0].data.customData.intervalSeconds, 10, "Expect intervalSeconds to be 10" );
+
+                if(receivedCount ==3){
+                    
+                    clearInterval(interval);
+                    donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "changeColour", handler: changeColourHandler}]);
+    
+                    // turn back on or next test ;-)
+                    donkyCore.donkyNetwork._useSignalR(true);
+                    done();  
+                }
+            }
+
+            donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", batchHandler: changeColourHandler});
+            
+            var notifications = [];
+            notifications.push(donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 }));
+            notifications.push(donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 }));
+            notifications.push(donkyCore.createContentNotificationForSpecifiedUsers(["johnsmith"], "changeColour", { "newColour": "#CDE", "intervalSeconds": 10 }));
+            
+
+            donkyCore.queueContentNotifications(notifications);
+            
+            // Need to synchronise to get it to send ;-)
+            donkyCore.donkyNetwork.synchronise();
+
+            interval = setInterval(function(){
+                // Need to synchronise again to recieve the notification ;-)
+                donkyCore.donkyNetwork.synchronise();
+            },10000);
+        }
+
+        function SignalRStarted(){
+            donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+
+            // turn off signalr to force sync over rest api
+            donkyCore.donkyNetwork._stopSignalR(function() {
+                donkyCore.donkyNetwork._useSignalR(false);
+                doTest();
+            });                     
+
+        }
+
+        donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {});
+    });
+
 
    /** Queue custom notification and process it  
     */
@@ -1012,6 +1189,7 @@
         donkyCore.subscribeToContentNotifications(module, {notificationType: "changeColour", handler: changeColourHandler});
 
         donkyCore.initialise({
+            
             apiKey: apikey1,    
             userDetails: defaultUserDetails,
             deviceDetails: defaultDeviceDetails,
@@ -1235,13 +1413,14 @@
                 assert.equal( notification.definition.content.data.intervalSeconds, 10, "Expect type to be same" );
                 donkyCore.unsubscribeFromContentNotifications(module, [{notificationType: "SendContent", handler: SendContentHandler}]);
                 
-                setTimeout(function() {
+                
+               setTimeout(function() {
                     // leave in a good state for next test
                     donkyCore.donkyNetwork._stopSignalR(function(){
                         done();  
-                    });   
+                    });                     
                 }, 2000);
-                  
+
             }
             
             donkyCore.subscribeToOutboundNotifications(module, { notificationType: "SendContent", handler: SendContentHandler });
@@ -1433,7 +1612,7 @@
     QUnit.test("Log level test", function(assert) {
         
         $.mockjax({
-            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
         
@@ -1462,7 +1641,7 @@
     QUnit.test("Log level test 2", function(assert) {
 
         $.mockjax({
-            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
 
@@ -1488,7 +1667,7 @@
     QUnit.test("Log level test 3", function(assert) {
 
         $.mockjax({
-            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
 
@@ -1522,7 +1701,7 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
             $.mockjax({
-                url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: true}
             });
 
@@ -1544,7 +1723,7 @@
     */
     QUnit.test("submitLog Integration test", function(assert) {
         $.mockjax({
-            url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+            url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
         
@@ -1579,7 +1758,7 @@
 
             // Mock ajax call returning alwaysSubmitErrors  = false
             $.mockjax({
-                url: "https://client-secure-api-northeurope.mobiledonky.com/api/debuglog",
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: false}
             });
 
@@ -1660,11 +1839,10 @@
             done(); 
         });
     });
-    
+
     QUnit.module( "Tags tests" );
 
-    // THis test assumes you have configured 3 tags for app space pointed to by apikey1:
-    // tag1, tag2, tag3
+	
     QUnit.test("test tags API", function(assert) {
         var done = assert.async();
 
@@ -1709,9 +1887,7 @@
 
         });
     });
-    
-    
-
+	
 </script>
   
 		

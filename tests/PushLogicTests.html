@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+    
+    <head>
+        <meta charset="utf-8">
+        <title>Unit / Integration tests</title>
+        <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+	    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
+        <script src="../modules/core/donkyData.js" data-cover></script>
+        <script src="../modules/core/donkyAccount.js" data-cover></script>
+        <script src="../modules/core/donkyLogging.js" data-cover></script>
+        <script src="../modules/core/donkyNetwork.js" data-cover></script>
+        <script src="../modules/core/donkyCore.js" data-cover></script>
+        <script src="../modules/coreAnalytics/donkyCoreAnalytics.js" data-cover></script>
+        <script src="../modules/automation/donkyAutomation.js" data-cover></script>
+        <script src="../modules/messaging/common/logic/donkyMessagingCommon.js" data-cover></script>
+        <script src="../modules/messaging/simplePush/logic/donkyPushLogic.js" data-cover></script>
+        <link rel="stylesheet" href="https://code.jquery.com/qunit/qunit-1.17.1.css">
+        <script src="https://code.jquery.com/qunit/qunit-1.17.1.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-mockjax/1.5.3/jquery.mockjax.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/blanket.js/1.1.4/blanket.min.js"></script>
+    </head>
+    
+    <body>
+        <div id="qunit"></div>
+        <div id="qunit-fixture"></div>
+        <script>
+            var apikey = ">>ENTER API KEY HERE<<";
+        
+        
+            var userDetails = {
+                id: "johnsmith",
+                displayName: "John Smith",
+                firstName: "John",
+                lastName: "Smith",
+                emailAddress: "john.smith@hotmail.co.uk",
+                countryCode: "GBR",
+                phoneNumber: "07979497000",
+            };
+            
+        
+            var deviceDetails = {
+                type: "donkyWebApp",
+                name: "donky",
+            };
+        
+            function resetDonky(){
+                // TODO: robustify secret population if it is deleted 
+                // Persist the device Id & saecret
+                var deviceId = localStorage.getItem("donky.net.core.deviceId");
+                var secret = localStorage.getItem("donky.net.core.secret");
+                localStorage.clear();
+                localStorage.setItem("donky.net.core.deviceId", deviceId);
+                localStorage.setItem("donky.net.core.secret", secret);
+            }
+        
+            function initializeDonky( reset, userDetails, deviceDetails, callback, apiKey ){
+                
+                if(reset) {
+                    resetDonky();
+                }
+                
+                donkyCore.donkyNetwork._useSignalR(false);
+                    
+                donkyCore.initialise({
+                    
+                    apiKey: apiKey === undefined ? apikey1 : apiKey,    
+                    userDetails: userDetails,
+                    deviceDetails: deviceDetails,
+                    appVersion : "1.9.6.9",
+                    resultHandler: function(result) {                    
+                        callback(donkyCore, result);
+                    }
+                });
+            }
+            
+            function daysBetween(first, second) {
+            
+                // Copy date parts of the timestamps, discarding the time parts.
+                var one = new Date(first.getFullYear(), first.getMonth(), first.getDate());
+                var two = new Date(second.getFullYear(), second.getMonth(), second.getDate());
+            
+                // Do the math.
+                var millisecondsPerDay = 1000 * 60 * 60 * 24;
+                var millisBetween = two.getTime() - one.getTime();
+                var days = millisBetween / millisecondsPerDay;
+            
+                // Round down.
+                return Math.floor(days);
+            }    
+            
+            function createTestPushMessage(donkyCore, isExpired){
+
+                var now = new Date();
+                var yesterday = new Date();;        
+                yesterday.setDate(now.getDate() - 1);
+                
+                return {
+                	"id" : donkyCore._uuid(),
+                	"type" : "SimplePushMessage",
+                	"data" : {
+                		"messageType" : "SimplePush",
+                		"msgSentTimeStamp" : "2015-07-06T12:22:56.477Z",
+                		"buttonSets" : [{
+            				"buttonSetId" : "DeclineAccept",
+            				"platform" : "Web",
+            				"interactionType" : "TwoButton",
+            				"buttonSetActions" : [{
+            						"actionType" : "Dismiss",
+            						"label" : "Decline"
+            					}, {
+            						"actionType" : "ExternalUrl",
+            						"data" : "http://www.bbc.co.uk/news",
+            						"label" : "Accept"
+            					}
+            				]
+            			}],
+                		"senderDisplayName" : "Identity1",
+                		"body" : "hello",
+                		"messageScope" : "A2P",
+                		"senderInternalUserId" : "12a25a05-c36b-48df-aab4-26a4d71eac9f",
+                		"senderMessageId" : "TO6cJuDp/E6jfPGnz/HB8w:9768668",
+                		"messageId" : donkyCore._uuid(),
+                		"contextItems" : {
+                			"ExternalRef" : "push",
+                			"ExternalId" : "CampaignId:68991"
+                		},
+                		"avatarAssetId" : "16cbfd1f-0e69-4f48-a286-2d8b615a0072|avatar|NE_DEV_RC1_RG1",
+                		"sentTimestamp" : now.toISOString(),
+                        "expiryTimeStamp" : isExpired ? yesterday.toISOString() : undefined
+                	},
+                	"createdOn" : now.toISOString()
+                };
+            }
+            
+                
+            QUnit.config.reorder = false;
+        
+            /**
+             *
+             */
+            QUnit.testStart(function( details ) {
+                console.log( "%c Now running: " + details.module + details.name, 'background: #222; color: #bada55' );
+            });
+        
+            /**
+             *
+             */
+            QUnit.testDone(function( details ) {   
+                console.log( "%c Finished running: " + details.module + details.name, 'background: #222; color: #bada55' );
+                // Need to reset mockjax after test to prevent pollution ...
+                $.mockjaxClear();
+            });
+        
+        
+        
+            QUnit.module( "Push logic tests" );
+        
+            
+            /**
+             * What should happen here ?
+             */
+            QUnit.test("Test Receiving a message", function(assert) {
+                var synchroniseCount = 0;
+                
+                var now = new Date();
+                var yesterday = new Date();;        
+                 yesterday.setDate(now.getDate() - 1);
+                
+                var done = assert.async();
+        
+                function SignalRStarted(){
+                    donkyCore.unsubscribeFromLocalEvent("SignalRStarted", SignalRStarted);
+        
+                    // turn off signalr to force sync over rest api
+                    donkyCore.donkyNetwork._stopSignalR(function() {
+                        donkyCore.donkyNetwork._useSignalR(false);
+                        startTest();
+                    });                     
+                }
+                
+                function sniffMessageReceived(notification){
+                    assert.equal( notification.type, "MessageReceived", "notification.type should be MessageReceived" );
+                    assert.equal( notification.messageType, "SimplePush", "notification.messageType should be SimplePush" );
+                    
+                    assert.equal( notification.acknowledgementDetail.result, "Delivered", "acknowledgementDetail.result should be Delivered" );
+                    assert.equal( notification.acknowledgementDetail.type, "SimplePushMessage", "acknowledgementDetail.type should be SimplePushMessage" );
+                }
+                
+                function sniffInteractionResult(notification){
+                    assert.equal( notification.type, "InteractionResult", "notification.type should be InteractionResult" );
+                    assert.equal( notification.userAction, "Button1", "notification.userAction should be Button1" );
+                    assert.equal( notification.interactionType, "TwoButton", "notification.interactionType should be TwoButton" );
+                    assert.equal( notification.buttonDescription, "Decline|Accept", "notification.buttonDescription should be Decline|Accept" );
+                    assert.equal( notification.operatingSystem, "Web", "notification.operatingSystem should be Web" );
+                    // this is the last message so we are done
+                    done();
+                }
+                
+                function sniffAcknowledgement(notification){
+                    assert.equal( true, false, "Acknowledgement notification should not be in here" );
+                }
+        
+                donkyCore.subscribeToLocalEvent("NewSimplePushMessagesReceived", function(event){
+                    console.log("--> NewSimplePushMessagesReceived()");
+                    var messages = event.data;                        
+                    assert.equal( messages.length, 1, "Should be a single message (one expired when received)" );
+                                
+                    var count = donkyPushLogic.getMessageCount();
+                    
+                    assert.equal( count, 1, "Should be a single message" );
+                    
+                    var msg = donkyPushLogic.getNextSimplePush();
+                                
+                    assert.equal( msg !== null, true, "Should not be null" );
+                    
+                    donkyPushLogic.setSimplePushResult(msg.id, "Decline");
+                                        
+                    count = donkyPushLogic.getMessageCount();
+                                
+                    assert.equal( count, 0, "Should be no messages" );
+                    
+                    msg = donkyPushLogic.getNextSimplePush();
+                                
+                    assert.equal( msg === null, true, "Should be null" );            
+                    console.log("<-- NewSimplePushMessagesReceived()");                                    
+                    
+                                
+                });
+        
+                function startTest(){                           
+                    $.mockjax({
+                        url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/notification/synchronise",
+                          response: function(settings) {
+                              
+                              switch(synchroniseCount++){
+                                  case 0:                                                                                      
+                                    this.responseText = { "serverNotifications" : [
+                                        createTestPushMessage(donkyCore, false), 
+                                        createTestPushMessage(donkyCore, true)] 
+                                    };
+                                  break;
+                                  
+                                  default: 
+                                  this.responseText = { "serverNotifications" : [] };
+                                  break;
+                              }
+                          } 
+                    });
+                    
+                    donkyCore.donkyNetwork.synchronise(function(){
+                        
+                    });                                
+                }
+                
+                var myModule = {
+                    name: "PushLogicUnitTest",
+                    version: "2.0.0.0"
+                };
+                
+                donkyCore.subscribeToOutboundNotifications(myModule, [{ 
+                        notificationType: "MessageReceived", 
+                        handler: sniffMessageReceived 
+                    }, 
+                    { 
+                        notificationType: "InteractionResult", 
+                        handler: sniffInteractionResult 
+                    }, 
+                    { 
+                        notificationType: "Acknowledgement", 
+                        handler: sniffAcknowledgement 
+                    }]);
+                donkyCore.subscribeToLocalEvent("SignalRStarted", SignalRStarted);
+                
+                initializeDonky(true, userDetails, deviceDetails, function(donkyCore, result) {
+                    assert.ok( result.succeeded, "result.succeeded should be set to false" );
+                             
+                    
+                }, apikey);
+            });
+        </script>
+    </body>
+
+</html>

@@ -11,9 +11,6 @@ body{
 	background-color:#fff;
 	font-family:'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
 	padding: 15px;
-	-webkit-box-shadow: 0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	-moz-box-shadow:    0px 0px 7px 0px rgba(50, 50, 50, 0.40);
-	box-shadow:         0px 0px 7px 0px rgba(50, 50, 50, 0.40);	
 }
 
 .forMobile{
@@ -55,7 +52,7 @@ body{
 }	   
                      
 .content h3{
-    color: #652f8e;
+    color: #26a7df;
     font-size: 20px;
     font-weight: bold;
     margin: 0 0 10px 0;
@@ -93,3 +90,4 @@ hr{
     padding-left: 10px;
 }
 
+#RichMessage{height:225px;}

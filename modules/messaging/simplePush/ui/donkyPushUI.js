@@ -31,12 +31,12 @@
 
         var defaults = { 
             // CSS URL to style the notification popup
-            bannerCSSURL: "../css/DonkyNotification.css",
+            bannerCSSURL: donkyCore.installDir + "css/DonkyNotification.css",
             // INLINE CSS to style the notification popup
             bannerCSS: null,
             //  URL for the notification popup template (moustache template) 
             //  You can either specify a url containing the template or inline it on the below "template" property ... 
-            templateURL: "../templates/SimplePushTemplate.html",
+            templateURL: donkyCore.installDir + "templates/SimplePushTemplate.html",
             // moustache template for notification popup
             template: null,
             // Direction for popup to slide from when initially shown [top|right|bottom|left]
@@ -48,11 +48,13 @@
             // URL for jquery - use cdn as below or host yourself
             jqueryJsUrl: "https://code.jquery.com/jquery-2.1.1.min.js",
             // iframe css - has responsive positional info in it
-            iframeCssUrl: "../css/DonkyNotificationIframe.css",
+            iframeCssUrl: donkyCore.installDir + "css/DonkyNotificationIframe.css",
             // the id to use for creating the iframe
             iframeId: "donkySimplePushIframe",
 			// default avatar to use if app-space doesn't have one
-			defaultAvatar: "../images/NoImage.png"
+			defaultAvatar: donkyCore.installDir + "images/NoImage.png",            
+			// default avatar to use if app-space doesn't have one
+			attentionAvatar: donkyCore.installDir + "images/attention-avatar.png",
         };
 
 		/**
@@ -94,7 +96,7 @@
                 // Any queued up to render ?
                 var nextSimplePush = donkyPushLogic.getNextSimplePush();
 
-                if (nextSimplePush != null) {
+                if (nextSimplePush !== null) {
                     this.renderPushMessage(nextSimplePush, animate);
                 }
             },
@@ -119,16 +121,22 @@
                             $.each(buttonSet.buttonSetActions, function(index, action) {
 
                                 var button = {
-                                    buttonText: action.label,
+                                    buttonText: action.label
                                 };
 
                                 switch (action.actionType) {
+                                    case "Javascript":
+                                        button.actionType = "Javascript";
+                                        if( action.data !== null){
+                                            button.linkURL = action.data;
+                                        }
+                                        break;                                    
                                     case "Dismiss":
-                                        button.className = "bannerDismiss";
+                                        button.actionType = "Dismiss";
                                         break;
                                     default:
-                                        button.className = "bannerAction";
-                                        if (action.data != null) {
+                                        button.actionType = "Link";
+                                        if (action.data !== null) {
                                             button.linkURL = action.data;
                                         }
                                         break;
@@ -145,19 +153,19 @@
                 var buttonAttribs = "";
                 $.each(buttons, function(index, button) {
                     if (button.linkURL !== undefined) {
-                        if (button.linkURL.indexOf("http") == 0) {
+                        if (button.linkURL.indexOf("http") === 0) {
                             // this is a fully qualified url
-                            buttonAttribs = "target='_blank' data-url='' href='" + button.linkURL + "' data-notification-id='" + notification.id + "'";
+                            buttonAttribs = "target='_blank' data-url='' href='" + button.linkURL + "' data-notification-id='" + notification.id + "' data-action-type='" + button.actionType + "'";
 
-                            buttonHtml = "<a class='btn " + button.className + "'" + buttonAttribs + ">" + button.buttonText + "</a>";
+                            buttonHtml = "<a class='btn donkyBannerButton'" + buttonAttribs + ">" + button.buttonText + "</a>";
                         } else {
                             // this is a relative link so parent page will open it 
-                            buttonAttribs = "data-url='" + button.linkURL + "' data-notification-id='" + notification.id + "'";
-                            buttonHtml = "<a class='btn " + button.className + "'" + buttonAttribs + ">" + button.buttonText + "</a>";
+                            buttonAttribs = "data-url='" + button.linkURL + "' data-notification-id='" + notification.id + "' data-action-type='" + button.actionType + "'";
+                            buttonHtml = "<a class='btn donkyBannerButton'" + buttonAttribs + ">" + button.buttonText + "</a>";
                         }
                     } else {
-                        buttonAttribs = "data-notification-id='" + notification.id + "'";
-                        buttonHtml = "<a class='btn " + button.className + "'" + buttonAttribs + ">" + button.buttonText + "</a>";
+                        buttonAttribs = "data-notification-id='" + notification.id + "' data-action-type='" + button.actionType + "'";
+                        buttonHtml = "<a class='btn donkyBannerButton'" + buttonAttribs + ">" + button.buttonText + "</a>";
                     }
 
                     button.ButtonHtml = buttonHtml;
@@ -206,37 +214,35 @@
                 }
 
 				// This is basically the entire source for the iframe
+                /*jshint multistr: true */
                 var iframeTemplate =
-                    "<!DOCTYPE html>\
-                        <html lang='en'> \
-                        <head>\
-                        <meta charset='utf-8' />\
-                        <meta http-equiv='X-UA-Compatible' content='IE=edge'/>\
-                        <meta name='viewport' content='width=device-width, initial-scale=1' />\
-                        <title>Donky Rich Message</title>\
-                        <link href='" + defaults.bootstrapCssUrl + "'  rel='stylesheet' type='text/css'  />\
-                        <script src='" + defaults.jqueryJsUrl + "' type='text/javascript'></script>"
-                        + bannerCSS + 
-                        "</head>\
-                        <body><div id='pushMessageContainer' style='position:absolute;width: 100%;'>" + html + "</div></body>\
-                        <script>\
-                            $(function(){\
-                                var $container = $('#pushMessageContainer');var outerHeight = $container.outerHeight(true);\
-                                $('#"+defaults.iframeId+"', window.parent.document).height(outerHeight + 'px');\
-                                " + animationJS + "\
-                                $('.bannerAction').click(function(){\
-                                    window.parent.$(window.parent.document).trigger('DonkyBannerClicked', [$(this).data('notification-id'), $(this).text(), $(this).data('url')]);\
-                                });\
-                                $('.bannerDismiss, .bannerClose').click(function(){\
-                                    window.parent.$(window.parent.document).trigger('DonkyBannerDismissed', [$(this).data('notification-id'), $(this).text()]);\
-                                });\
-                            });\
-                        </script>\
-                        </html>";
+"<!DOCTYPE html>\
+    <html lang='en'> \
+    <head>\
+    <meta charset='utf-8' />\
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'/>\
+    <meta name='viewport' content='width=device-width, initial-scale=1' />\
+    <title>Donky Rich Message</title>\
+    <link href='" + defaults.bootstrapCssUrl + "'  rel='stylesheet' type='text/css'  />\
+    <script src='" + defaults.jqueryJsUrl + "' type='text/javascript'></script>" + bannerCSS + "</head>\
+    <body><div id='pushMessageContainer' style='position:absolute;width: 100%;'>" + html + "</div></body>\
+    <script>\
+        $(function(){\
+            var $container = $('#pushMessageContainer');var outerHeight = $container.outerHeight(true);\
+            $('#"+defaults.iframeId+"', window.parent.document).height(outerHeight + 'px');\
+            " + animationJS + "\
+            $('.donkyBannerButton, .bannerClose').click(function(){\
+                window.parent.$(window.parent.document).trigger('donkyNotificationButtonClicked', [$(this).data('notification-id'), $(this).text(), $(this).data('url'),  $(this).data('action-type')]);\
+            });\
+        });\
+    </script>\
+    </html>";
 
                 $("body").append("<iframe id='"+defaults.iframeId+ "' frameborder='0' scrolling='no' ></iframe>");
 
-                donkyUICommon.renderIframeSrcDoc($("#"+defaults.iframeId), iframeTemplate);
+                donkyUICommon.renderIframeSrcDoc($("#"+defaults.iframeId), iframeTemplate, function(){
+                    // TODO: calc iframe height and resize ?
+                });
 
             },
 			/**
@@ -255,7 +261,7 @@
                 var unreadPushMessageCount = pushMessageCount - 1;
 
                 var model = {
-                    AvatarUrl: (message.avatarAssetId != null && message.avatarAssetId != "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : defaults.defaultAvatar,					
+                    AvatarUrl: (message.avatarAssetId !== null && message.avatarAssetId !== "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : defaults.defaultAvatar,					
                     NotificationId: notification.id,
                     SenderDisplayName: message.senderDisplayName,
                     Body: message.body,
@@ -283,20 +289,22 @@
 		//====================
 
 		/**
-		 * @class
-		 * @name DonkyPushUI
+		 * @class DonkyPushUI
 		 */
 		function DonkyPushUI() {
-            console.log("Constructing DonkyPushUI");
+            donkyCore.donkyLogging.infoLog("Constructing DonkyPushUI");
 
             var module = {  
                 name: "DonkyPushUI", 
-                version:"2.0.0.0" 
+                version: "2.0.0.1" 
             };
 
             donkyCore.registerModule(module);
 		}
 
+        /**
+         *  @memberof DonkyPushUI 
+         */
 		DonkyPushUI.prototype = {
 
             /**
@@ -306,7 +314,7 @@
             initialise: function(options) {
 
                 donkyCore._extend(defaults, options);
-
+                
                 donkyUICommon.loadCss(defaults.iframeCssUrl);
 
                 // Load the container on document.reaady and display any messages if there are any
@@ -328,30 +336,51 @@
 				            }
                         }
                     );
-
-                // Notifications from iframe that need notifications sent back to Donky
-                $(document).on("DonkyBannerClicked",function(evt, notificationId, buttonText, url) {
-                    donkyCore.donkyLogging.infoLog( "DonkyBannerClicked: " + notificationId);
-
-                    donkyPushLogic.setSimplePushResult(notificationId, buttonText);
-		
-		            if(url != ""){
-			            // Dont need to remove as we are going somewhere
-			            location.href = url;		
-		            }else{
-                        // Remove from UI
-			            pushBannerManager.remove();	
-		            }
-		
-                });
-
-                $(document).on("DonkyBannerDismissed",function(evt, notificationId, buttonText) {
-                    donkyCore.donkyLogging.infoLog("DonkyBannerDismissed: " + notificationId);
                 
-                    donkyPushLogic.setSimplePushResult(notificationId, buttonText);
-
+                // TODO: remove the JS in the iframe and wire in from here ?
+                
+                $(document).on("donkyNotificationButtonClicked", function(evt, notificationId, buttonText, url, action) {
+                    
+                   var dets = {
+                        notificationId: notificationId,
+                        buttonText: buttonText,
+                        url: url,
+                        action: action
+                    };
+            
+                    donkyCore.donkyLogging.infoLog( "donkyNotificationButtonClicked: " + JSON.stringify(dets));
+            
+                    donkyPushLogic.setSimplePushResult(notificationId, buttonText);    
+            
+                    switch (action) {
+                        case "Javascript":
+                            if (url !== undefined) {
+                                var code = atob(url);
+                                try {
+                                    eval(code);// jshint ignore:line
+                                } catch (e) {
+                                }
+                            }
+                            break; 
+            
+                        case "Dismiss":
+                            break;
+                        
+                        case "Link":
+            		        if(url !== ""){
+            			        // Dont need to remove as we are going somewhere
+            			        location.href = url;		
+            		        }
+                            break; 
+            
+                        default:
+                            break;
+                    }
+                    
                     pushBannerManager.remove();
-                });
+            
+                });                
+                
             }
 		};
 
@@ -366,7 +395,7 @@
             return factory(donkyCore, donkyPushLogic, donkyUICommon, Mustache); 
         });
 	} else {
-		window['donkyPushUI'] = factory(window.donkyCore, window.donkyPushLogic, window.donkyUICommon, window.Mustache);
+		window.donkyPushUI = factory(window.donkyCore, window.donkyPushLogic, window.donkyUICommon, window.Mustache);
 	}
 
 }());
