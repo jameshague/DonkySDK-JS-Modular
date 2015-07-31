@@ -58,12 +58,10 @@ Donky-Core-SDK is available under the MIT license. See the LICENSE file for more
 
 ## Third Party Dependencies
 
-<ul>
-	<li>[jQuery](https://jquery.com/)</li>
-	<li>[signalR](http://signalr.net/)</li>
-	<li>[Moustache](https://mustache.github.io/) (for UI modules)</li> 
-	<li>[Require.js](http://requirejs.org/) (Recommended for dependency management but not mandatory)</li>
-</ul>
+* [jQuery](https://jquery.com/)
+* [signalR](http://signalr.net/)
+* [Moustache](https://mustache.github.io/) (for UI modules)
+* [Require.js](http://requirejs.org/) (Recommended for dependency management but not mandatory)
 
 # Getting Started
 
