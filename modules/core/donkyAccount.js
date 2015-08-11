@@ -19,6 +19,9 @@ var DonkyAccount = (function () {
 
     // handle returned from setInterval for checking token
     var checkTokenInterval = null;
+    
+    // Boolean to guard against repeated calls to update  
+    var updatingDetails = false;
 
     /**
      * Creates donkyAccount object.
@@ -193,10 +196,10 @@ var DonkyAccount = (function () {
                         donkyCore.donkyNetwork._startSignalR();
                     }
 
-                    callback({ succeeded: true });
+                    return( callback({ succeeded: true }) );
                 } else {
                     donkyCore.donkyLogging.warnLog("Failed to  refresh authorization token");
-                    if (result.statusCode === 401) {
+                        if (result.statusCode === 401) {
                         donkyCore.donkyLogging.warnLog("Can't refresh token - have I been deleted ?");
 
                         var settings = _instance.getRegistrationDetails();
@@ -207,7 +210,7 @@ var DonkyAccount = (function () {
                                 donkyCore.donkyNetwork._startSignalR();
                             }
 
-                            callback(registerResult);
+                            return( callback(registerResult) );
                         });
 
                     } else if (result.statusCode === 403) {
@@ -217,7 +220,7 @@ var DonkyAccount = (function () {
 
                     // a 401 will re-register and we don't want callback firing twice
                     if (result.statusCode !== 401) {
-                        callback({ succeeded: false, result: result });
+                        return( callback({ succeeded: false, result: result }) );
                     }
                 }
             });
@@ -357,6 +360,11 @@ var DonkyAccount = (function () {
      */
     DonkyAccount.prototype.getRegistrationDetails = function () {
         try {
+            
+            if(updatingDetails){
+                donkyCore.donkyLogging.warnLog("A call to update details is in progress, this data is stale ...");    
+            }
+                        
             return {
                 userDetails: donkyCore.donkyData.get("userDetails"),
                 deviceDetails: donkyCore.donkyData.get("deviceDetails")
@@ -374,6 +382,11 @@ var DonkyAccount = (function () {
      */
     DonkyAccount.prototype.getDevice = function () {
         try {
+
+            if(updatingDetails){
+                donkyCore.donkyLogging.warnLog("A call to update details is in progress, this data is stale ...");    
+            }
+            
             var browserInfo = _instance._getBrowserInfo();
             var deviceDetails = donkyCore.donkyData.get("deviceDetails");
 
@@ -399,6 +412,11 @@ var DonkyAccount = (function () {
      * @returns {ClientDetails} - The current local client details.
      */
     DonkyAccount.prototype._getClient = function () {
+        
+        if(updatingDetails){
+            donkyCore.donkyLogging.warnLog("A call to update details is in progress, this data is stale ...");    
+        }
+        
         return donkyCore.donkyData.get("clientDetails");
     }
 
@@ -479,15 +497,28 @@ var DonkyAccount = (function () {
             user: settings.userDetails,
             device: settings.deviceDetails
         };
-
+        
+        if (updatingDetails === true ) {
+            
+            return( callback({
+                succeeded: false,
+                response: { failedClientNotifications: [{
+                            "failureReason": "Cannot call _updateRegistrationDetails() when a previous update is still in progress"
+                        }                        
+                ] }
+            }));                
+        }
+        
         extendDeviceDetails(args.device);
 
+        updatingDetails = true;
         donkyCore.donkyNetwork.ajax(
             args,
             "PUT", /*PUT updates, POST creates*/
             donkyCore.donkyNetwork.api.secure,
             "registration",
             function (result) {
+                updatingDetails = false;
                 if (result.succeeded) {
                     donkyCore.donkyData.set("userDetails", args.user);     
 
@@ -518,15 +549,28 @@ var DonkyAccount = (function () {
                 throw new Error("callback not supplied");
             }
 
+            if (updatingDetails === true ) {
+                
+                return( callback({
+                    succeeded: false,
+                    response: { failedClientNotifications: [{
+                                "failureReason": "Cannot call updateUserDetails() when a previous update is still in progress"
+                            }                        
+                    ] }
+                }));                
+            }
+
+            updatingDetails = true;
             donkyCore.donkyNetwork.ajax(
                 userDetails,
                 "PUT",
                 donkyCore.donkyNetwork.api.secure,
                 "registration/user",
                 function (result) {
+                    updatingDetails = false;
                     if (result.succeeded) {
                         donkyCore.donkyData.set("userDetails", userDetails);
-                    }
+                    }                    
                     callback(result);
                 });
         } catch (e) {
@@ -551,14 +595,27 @@ var DonkyAccount = (function () {
                 throw new Error("callback not supplied");
             }
 
+            if (updatingDetails === true ) {
+                
+                return( callback({
+                    succeeded: false,
+                    response: { failedClientNotifications: [{
+                                "failureReason": "Cannot call updateDeviceDetails() when a previous update is still in progress"
+                            }                        
+                    ] }
+                }));                
+            }
+
             extendDeviceDetails(deviceDetails);
 
+            updatingDetails = true;
             donkyCore.donkyNetwork.ajax(
                 deviceDetails,
                 "PUT",
                 donkyCore.donkyNetwork.api.secure,
                 "registration/device",
                 function (result) {
+                    updatingDetails = false;
                     if (result.succeeded) {            
                     
                         // dont want these going to the client
@@ -587,12 +644,25 @@ var DonkyAccount = (function () {
                 throw new Error("callback not supplied");
             }
 
+            if (updatingDetails === true ) {
+                
+                return( callback({
+                    succeeded: false,
+                    response: { failedClientNotifications: [{
+                                "failureReason": "Cannot call _updateClient() when a previous update is still in progress"
+                            }                        
+                    ] }
+                }));                
+            }
+
+            updatingDetails = true;
             donkyCore.donkyNetwork.ajax(
                 clientDetails,
                 "PUT",
                 donkyCore.donkyNetwork.api.secure,
                 "registration/client",
                 function (result) {
+                    updatingDetails = false;
                     if (result.succeeded) {
                         donkyCore.donkyData.set("clientDetails", clientDetails);
                     }

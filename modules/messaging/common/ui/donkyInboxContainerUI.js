@@ -106,10 +106,10 @@
 	     */
 	    function loadTemplates( callback ) {
 	
-	        $.get(defaults.templateURL, function(response) {
+	        jQuery.get(defaults.templateURL, function(response) {
 					
-				templates.handleTemplate = $(response).filter('#handleTemplate').html();
-				templates.homePageTemplate = $(response).filter('#homePageTemplate').html(); 
+				templates.handleTemplate = jQuery(response).filter('#handleTemplate').html();
+				templates.homePageTemplate = jQuery(response).filter('#homePageTemplate').html(); 
 		
 	            callback();
 	        });
@@ -207,7 +207,7 @@
 			
 			// Setup handlers to navigate into a child view if menuitem is clicked
 			defaults.$iFrameId.contents().find(".list-group-item").click(function(){
-				viewIndex = $(this).data("view-index");
+				viewIndex = jQuery(this).data("view-index");
 				donkyCore.donkyData.set("InboxContainerView", { index: viewIndex, isOpen: isOpen } );
 				donkyUICommon.setInboxViewState(null);
 				views[viewIndex].renderView();						
@@ -297,7 +297,7 @@
 					donkyCore._extend(defaults, settings);	
 				}
 													
-				$(window).on("resize orientationchange",function(){
+				jQuery(window).on("resize orientationchange",function(){
 				  	onDimensionsChanged();
 				});									
 								
@@ -325,19 +325,19 @@
 				// push module has rendered a popup and user has clicked view button.
 				// It only displays a popup if inbox is closed so we need to open
 				// Child view will render the message.
-				$(document).on("ViewRichMessage",function(evt, messageId) {
+				jQuery(document).on("ViewRichMessage ViewChatMessage",function(evt, messageId) {
 					openInboxContainer(defaults.defaultAnimationTimeout);
 				});
 															
-				$(document).on("ViewRichInbox",function(evt) {
+				jQuery(document).on("ViewRichInbox",function(evt) {
 					openInboxContainer(defaults.defaultAnimationTimeout);
 				});
 
 				if(defaults.iFrameId !== null){
 					// create the iframe for the inbox
-					$("body").append("<iframe id='" + defaults.iFrameId + "' frameborder='0' scrolling='no' ></iframe>");
+					jQuery("body").append("<iframe id='" + defaults.iFrameId + "' frameborder='0' scrolling='no' ></iframe>");
 					// Cache a reference to the jQuery object
-					defaults.$iFrameId = $( "#" + defaults.iFrameId); 
+					defaults.$iFrameId = jQuery( "#" + defaults.iFrameId); 
 
 					// ideally would use 100% but doesn't behave correctly on iOS devices						
 					defaults.iFrameCss.height = window.innerHeight + "px";			
@@ -347,9 +347,9 @@
 				}
 				if(defaults.handleIFrameId !== null){
 					// create the iframe for the inbox handle
-					$("body").append("<iframe id='" + defaults.handleIFrameId + "' frameborder='0' scrolling='no' ></iframe>");
+					jQuery("body").append("<iframe id='" + defaults.handleIFrameId + "' frameborder='0' scrolling='no' ></iframe>");
 					// Cache a reference to the jQuery object
-					defaults.$handleIFrameId = $("#"+defaults.handleIFrameId);
+					defaults.$handleIFrameId = jQuery("#"+defaults.handleIFrameId);
 					// Apply the iframe css from the defaults
 					defaults.$handleIFrameId.css(defaults.handleIFrameCss);
 				}
@@ -409,6 +409,20 @@
 								donkyInboxContainerUI.renderView();
 							}
 						});
+
+						// New chat message received 
+				        donkyCore.subscribeToLocalEvent("NewChatMessagesReceived", function(event) {
+							 
+							// 1) always update the handle
+							renderHandle();
+							
+							var viewState = donkyUICommon.getInboxViewState();
+							// 2) if on homePageTemplate view, refresh (update unread info on menus)
+							if(viewState !== null && viewState.view === donkyUICommon.inboxViews.homePage){
+								donkyInboxContainerUI.renderView();
+							}
+						});
+
 											
 					});					
 				});							

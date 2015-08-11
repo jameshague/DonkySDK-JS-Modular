@@ -76,7 +76,7 @@
             });
 
             // Store the session end time on page unload
-            $( window ).unload(function() {
+            jQuery( window ).unload(function() {
                 donkyCore.donkyData.set("SessionEndTime", new Date().valueOf());
 	        });	
 

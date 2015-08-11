@@ -9,6 +9,7 @@ require.config({
 		"donkyCore": "modules/core/donkyCore",
 		"donkyAutomation": "modules/automation/donkyAutomation",
 		"donkyCoreAnalytics": "modules/coreAnalytics/donkyCoreAnalytics",
+		"donkyAudio": "modules/messaging/common/logic/donkyAudio",
 		"donkyMessagingCommon": "modules/messaging/common/logic/donkyMessagingCommon",
 		"donkyPushLogic": "modules/messaging/simplePush/logic/donkyPushLogic",
 		"donkyUICommon": "modules/messaging/common/ui/donkyUICommon",

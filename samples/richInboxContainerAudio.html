@@ -45,7 +45,11 @@
             
         
          */
-        require(['donkyRichInboxUI','donkyInboxContainerUI', 'donkyPushUI','donkyCore', 'donkyCoreAnalytics'],function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics) {
+        require(['donkyRichInboxUI','donkyInboxContainerUI', 'donkyPushUI','donkyCore', 'donkyCoreAnalytics','donkyMessagingCommon', 'donkyAudio'],
+            function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics, donkyMessagingCommon, donkyAudio) {
+
+            donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, "../audio/donkey.wav");
+            donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, "../audio/Pling.mp3");
 
             // Initialise Donky (anonymously)
             donkyCore.initialise({

@@ -1,5 +1,5 @@
 /*!
- * DonkyMessagingCore JavaScript Library
+ * DonkyMessagingCommon JavaScript Library
  *
  * Copyright (C) Donky Networks Ltd. All rights reserved.
  *
@@ -18,8 +18,15 @@
 		//====================
 		
 
-		// DonkyMessagingCore
+		// DonkyMessagingCommon
 		//====================
+        /** Enum for message types. */
+        var messageTypes = {
+            simplePush: 0, 
+            rich: 1,
+            chat: 2,
+            custom: 3
+        };
 
 		/**
 		 * @class DonkyMessagingCommon
@@ -125,7 +132,12 @@
 		        }
 
                 return expired;
-            }
+            },
+            
+            /**
+             *  messageTypes enum  
+             */    
+            messageTypes: messageTypes
 		};
 
 		// "static" instance

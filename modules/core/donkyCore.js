@@ -13,9 +13,7 @@ var DonkyCore = (function() {
     // This is thr root location of the donky JS installation. Other modules that need to reference resources
     // will use this property to resolve any paths. 
     var installDir = "../";
-    
-    // var installDir = "https://cdn.dnky.co/sdk/latest-modular/";
-     
+         
     // array of subscribers to Donky notifications
     var donkyNotificationSubscribers = [];
 
@@ -711,8 +709,24 @@ var DonkyCore = (function() {
                 _instance.donkyAccount.updateRegistrationDetails(regDetailsToUpdate, function(result) {
                         if (result.succeeded) {
                             _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                            settings.resultHandler(result);
+                        }else{
+                            if( result.statusCode === 400 ){
+                                var userTaken = result.response.filter(function(elem){
+                                    return elem.failureKey === "UserIdAlreadyTaken";
+                                });
+                                
+                                if(userTaken.length === 1){
+                                    console.log("UserIdAlreadyTaken");                                     
+                                    _instance.donkyAccount._register(settings, function(result){
+                                        settings.resultHandler(result);
+                                    });
+                                }
+                            }else{
+                                settings.resultHandler(result);
+                            }
                         } 
-                        settings.resultHandler(result);
+                        
                     });
         
             } else {
@@ -739,24 +753,12 @@ var DonkyCore = (function() {
     * @param {Callback} settings.resultHandler - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
     */
     DonkyCore.prototype.initialise = function(settings) {
-        try {
-        
-            var browserInfo = _instance.donkyAccount._getBrowserInfo();
+        // try {
+            var message;
             
-            if(browserInfo.name === "MSIE" && browserInfo.version < 10){
-                var message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
-                _instance.donkyLogging.warnLog(message);
-                throw new Error(message);                
-            }               
-
-            if (settings === undefined || settings === null) {
+            // Settings specified ?
+            if (settings === undefined || settings === null) {                
                 throw new Error("no options specified");
-            }
-
-            // ApiKey specified ?
-            if (settings.apiKey === undefined) {
-                _instance.donkyLogging.warnLog("No apiKey specified");
-                throw new Error("apiKey not specified");
             }
 
             // ResultHandler specified ?
@@ -764,6 +766,25 @@ var DonkyCore = (function() {
                 _instance.donkyLogging.warnLog("No ResultHandler specified");
                 throw new Error("resultHandler not specified");
             }
+
+            var browserInfo = _instance.donkyAccount._getBrowserInfo();
+            
+            if(browserInfo.name === "MSIE" && browserInfo.version < 10){
+                message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
+                _instance.donkyLogging.warnLog(message);
+                return(settings.resultHandler({succeeded : false, response: message}));
+                // throw new Error(message);                
+            }               
+
+
+            // ApiKey specified ?
+            if (settings.apiKey === undefined) {
+                message = "No apiKey specified";
+                _instance.donkyLogging.warnLog(message);
+                return(settings.resultHandler({succeeded : false, response: message}));
+                //throw new Error("apiKey not specified");
+            }
+
 
             // Different API key ?
             var currentKey = _instance.donkyData.get("apiKey");
@@ -806,12 +827,12 @@ var DonkyCore = (function() {
                 }, 
                 true );
             }
-		}catch(e){
-			_instance.donkyLogging.errorLog("caught exception in initialise() : " + e );
-            if (settings!== undefined && _instance._isFunction(settings.resultHandler)) {
-                settings.resultHandler({succeeded : false});
-            }
-		}
+		//}catch(e){
+		//	_instance.donkyLogging.errorLog("caught exception in initialise() : " + e );
+        //    if (settings!== undefined && _instance._isFunction(settings.resultHandler)) {
+        //        settings.resultHandler({succeeded : false});
+        //    }
+		//}
     };
 
 /**
@@ -1211,9 +1232,10 @@ var DonkyCore = (function() {
                 if (_instance._isFunction(callback)) {
                     callback({ succeeded: false });
                 }
+                return;
             }
         }
-
+        
         if (_instance.donkyAccount.isRegistered() &&
             !_instance.donkyAccount._isSuspended()) {
             // submit log is a secure method so if not registered don't attempt
@@ -1279,8 +1301,7 @@ var DonkyCore = (function() {
 			 _instance.donkyLogging.errorLog("caught exception in submitLog() : " + e );
         }    
     };
-    
-    
+        
 /**
  *  Export the root inatallation folder to any other modules that need to refernce any other static files part of the release. 
  */    
@@ -1291,7 +1312,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.1.0.2";
+        return "2.2.0.0";
     };
     
     /** 

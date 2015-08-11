@@ -5,6 +5,10 @@
         <meta charset="utf-8">
         <title>Unit / Integration tests</title>
         <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>                             
 	    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
         <script src="../modules/core/donkyData.js" data-cover></script>
         <script src="../modules/core/donkyAccount.js" data-cover></script>
@@ -149,7 +153,7 @@
             QUnit.testDone(function( details ) {   
                 console.log( "%c Finished running: " + details.module + details.name, 'background: #222; color: #bada55' );
                 // Need to reset mockjax after test to prevent pollution ...
-                $.mockjaxClear();
+                jQuery.mockjaxClear();
             });
         
         
@@ -229,7 +233,7 @@
                 });
         
                 function startTest(){                           
-                    $.mockjax({
+                    jQuery.mockjax({
                         url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/notification/synchronise",
                           response: function(settings) {
                               

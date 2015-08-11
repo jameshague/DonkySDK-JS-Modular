@@ -3,7 +3,11 @@
   <head>
     <meta charset="utf-8">
     <title>Unit / Integration tests</title>
-	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>       
+	<script src="https://code.jquery.com/jquery-1.11.2.min.js"></script> 
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>                             
 	<script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>       
 
     <script src="../modules/core/donkyData.js" data-cover></script>
@@ -118,7 +122,7 @@
     QUnit.testDone(function( details ) {   
         console.log( "%c Finished running: " + details.module + details.name, 'background: #222; color: #bada55' );
         // Need to reset mockjax after test to prevent pollution ...
-        $.mockjaxClear();
+        jQuery.mockjaxClear();
     });
 
 
@@ -494,7 +498,7 @@
             assert.ok( !result.succeeded, "result.succeeded should be set to false" );
             assert.equal( result.statusCode, 401, "Registration API should return a 401" );
 
-            //$.mockjax({
+            //jQuery.mockjax({
             //    url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
             //    responseText: null
             //});
@@ -558,14 +562,15 @@
     QUnit.test("test no args when calling init", function(assert) {
         resetDonky();
         var done = assert.async();
-
-        donkyCore.initialise();
-
-        setTimeout(function(){
-            assert.ok( !donkyCore.donkyAccount.isRegistered(), "isRegistered should return false" );
-            done();                            
-        }, 1000);
-
+        
+        try{
+            donkyCore.initialise();    
+        }catch(e)
+        {
+            assert.equal( e.message, "no options specified", "Should throw \"no options specified\"" );
+            done();
+        }
+        
     });
 
 
@@ -577,17 +582,17 @@
         resetDonky();
         var done = assert.async();
 
-        donkyCore.initialise({
+        try{
+            donkyCore.initialise({
+                
+                apiKey: apikey1, 
+                appVersion : "1.9.6.9"
+            });
             
-            apiKey: apikey1, 
-            appVersion : "1.9.6.9"
-        });
-
-
-        setTimeout(function(){
-            assert.ok( !donkyCore.donkyAccount.isRegistered(), "isRegistered should return false" );
-            done();                            
-        }, 1000);
+        }catch(e){
+            assert.equal( e.message, "resultHandler not specified", "Should throw \"resultHandler not specified\"" );
+            done();            
+        }
 
     });
 
@@ -633,7 +638,7 @@
 
     QUnit.test("test _refreshToken with a mocked user suspension", function(assert) {
 
-        $.mockjax({
+        jQuery.mockjax({
             url: "https://dev-client-api.mobiledonky.com/api/authentication/gettoken",
             status: 403,
             responseText: null
@@ -723,7 +728,7 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
 
-            $.mockjax({
+            jQuery.mockjax({
                 url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
                 responseText: null
             });
@@ -741,6 +746,74 @@
             });                     
         });
     });
+    
+    
+   /** Tests Updating user datails.
+    */
+    QUnit.test("Updates user datails twice Unit Test", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            jQuery.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/user",
+                responseText: null,
+                responseTime: 2000
+            });
+
+            // we are intentionally doing it wrong
+            donkyCore.donkyAccount.updateUserDetails(defaultUpdatedUserDetails, function(result) {
+                console.log("updateUserDetails callback1");
+
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                                     
+                
+            });
+            
+            // this should fail
+            donkyCore.donkyAccount.updateUserDetails(defaultUpdatedUserDetails, function(result) {
+                console.log("updateUserDetails callback2");
+                assert.equal( result.succeeded, false, "Expect value to be false" );
+                // leave in a good state for next test
+            });
+        });                     
+    });
+   
+   /** Tests Updating user datails.
+    */
+    QUnit.test("Updates device datails twice Unit Test", function(assert) {
+
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
+
+            jQuery.mockjax({
+                url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/device",
+                responseText: null,
+                responseTime: 2000
+            });
+
+            // we are intentionally doing it wrong
+            donkyCore.donkyAccount.updateDeviceDetails(replacementDeviceDetails, function(result) {
+                console.log("updateDeviceDetails callback1");
+
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    done();  
+                });                                     
+                
+            });
+            
+            // this should fail
+            donkyCore.donkyAccount.updateUserDetails(replacementDeviceDetails, function(result) {
+                console.log("updateDeviceDetails callback2");
+                assert.equal( result.succeeded, false, "Expect value to be false" );
+                // leave in a good state for next test
+            });
+        });                     
+    });
+
 
    /** Tests Updating user datails.
     */
@@ -764,6 +837,28 @@
 
     });
 
+   /** Tests UserId taken is handled correctly.
+    */
+    QUnit.test(" Tests UserId taken is handled correctly", function(assert) {
+        var done = assert.async();
+
+        initializeDonky(true, undefined, undefined, function(donkyCore) {
+
+            initializeDonky(false, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+    
+                assert.ok( result.succeeded, "result.succeeded should be set to true" );
+                
+                // leave in a good state for next test
+                donkyCore.donkyNetwork._stopSignalR(function(){
+                    assert.ok( result.succeeded, "result.succeeded should be set to true" );
+                    done();  
+                });                     
+            });
+        });
+    });
+
+
+
    /** Tests Updating Device datails.
     */
     QUnit.test("Updates device details Unit Test", function(assert) {
@@ -772,7 +867,7 @@
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
                 
-            $.mockjax({
+            jQuery.mockjax({
                 url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration/device",
                 responseText: null
             });
@@ -857,7 +952,7 @@
                 deviceDetails: replacementDeviceDetails
             };
                 
-            $.mockjax({
+            jQuery.mockjax({
                 url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/registration",
                 responseText: null
             });
@@ -1566,7 +1661,7 @@
             assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
             assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
             assert.equal( result.statusCode, 400, "statusCode shoudl be 400 (Bad request)" );
-            assert.ok( $.isArray(result.response), "response should contain array of validation errors" );
+            assert.ok( jQuery.isArray(result.response), "response should contain array of validation errors" );
 
             done();  
         });        
@@ -1605,13 +1700,15 @@
     });
 
     QUnit.module( "Logging tests" );
-
+   
     /**
      * Log level test
      */
     QUnit.test("Log level test", function(assert) {
         
-        $.mockjax({
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        
+        jQuery.mockjax({
             url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
@@ -1640,7 +1737,9 @@
      */
     QUnit.test("Log level test 2", function(assert) {
 
-        $.mockjax({
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        
+        jQuery.mockjax({
             url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
@@ -1666,7 +1765,9 @@
      */
     QUnit.test("Log level test 3", function(assert) {
 
-        $.mockjax({
+        donkyCore.donkyData.remove("lastSubmitLogTimestamp");
+        
+        jQuery.mockjax({
             url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
@@ -1696,11 +1797,12 @@
    /** Submit debug log  
     */
     QUnit.test("submitLog Unit test", function(assert) {
+        
         donkyCore.donkyData.remove("lastSubmitLogTimestamp");    
         var done = assert.async();
 
         initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function(donkyCore) {
-            $.mockjax({
+            jQuery.mockjax({
                 url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: true}
             });
@@ -1714,7 +1816,11 @@
                 donkyCore.donkyNetwork._stopSignalR(function(){
                     done();  
                 });                     
-            });            
+            });     
+            
+            
+            
+                   
         });
     });
 
@@ -1722,7 +1828,7 @@
    /** Submit debug log  
     */
     QUnit.test("submitLog Integration test", function(assert) {
-        $.mockjax({
+        jQuery.mockjax({
             url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
             responseText: {alwaysSubmitErrors: true}
         });
@@ -1757,7 +1863,7 @@
             donkyCore.donkyData.set("configuration", configuration);
 
             // Mock ajax call returning alwaysSubmitErrors  = false
-            $.mockjax({
+            jQuery.mockjax({
                 url: "https://dev-client-secure-api-northeurope.mobiledonky.com/api/debuglog",
                 responseText: {alwaysSubmitErrors: false}
             });
@@ -1851,7 +1957,7 @@
 			donkyCore.donkyAccount.getTags(function(getResult1){
 				assert.equal( getResult1.succeeded, true, "call succeeded" );
 				
-				assert.equal( $.isArray(getResult1.response),  true, "array returned" );			
+				assert.equal( jQuery.isArray(getResult1.response),  true, "array returned" );			
 				
 				var tagInfo = [
 					{

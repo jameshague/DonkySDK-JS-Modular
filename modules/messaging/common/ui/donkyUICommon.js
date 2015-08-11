@@ -18,7 +18,7 @@
                 richInbox: 1,
                 richMessage: 2,
                 chatInbox: 3,
-                chatMessage: 4,
+                chatConversation: 4,
                 attachmentCarousel: 5,
                 profilePage: 6,
                 contacts: 7
@@ -114,8 +114,8 @@
              */
             renderIframeSrcDoc : function($id, html, callback) {
 
-                if ($.isFunction(callback)) {
-                    $id.load(function() { callback($(this)); });
+                if (donkyCore._isFunction(callback)) {
+                    $id.load(function() { callback(jQuery(this)); });
                 }
         
                 if (srcDocSupported) {

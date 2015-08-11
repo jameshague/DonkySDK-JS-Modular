@@ -129,7 +129,7 @@
 		    findObj: function(messageId){
 			    var richMessages = this.load();
 			    var messsage = null;
-			    $.each(richMessages, function(index,item){
+			    donkyCore._each(richMessages, function(index,item){
                 
 				    if(item.messageId == messageId){
 					    messsage = item;
@@ -146,7 +146,7 @@
 			 */			
 		    findId: function(richMessages, messageId){
 			    var found = -1;
-			    $.each(richMessages, function(index,item){
+			    donkyCore._each(richMessages, function(index,item){
 				    if(item.messageId == messageId){
 					    found = index;
 				    }
@@ -376,7 +376,7 @@
                     var richMessages = _richMessageManager.load();
                     var unreadRichMessageCount = 0;
 
-                    $.each(richMessages, function(index, richMessage) {
+                    donkyCore._each(richMessages, function(index, richMessage) {
                         if (richMessage.isRead === false) {
                             unreadRichMessageCount++;
                         }            
@@ -439,7 +439,7 @@
                     var messages = _richMessageManager.load();
 
                     var filtered = [];
-                    $.each(messages, function(index, message) {
+                    donkyCore._each(messages, function(index, message) {
                         if (message.description.toLowerCase().indexOf(filterText.toLowerCase()) != -1) {
                             message.description = highlightWords(message.description, filterText);
                             filtered.push(message);

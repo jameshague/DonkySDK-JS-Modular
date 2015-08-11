@@ -99,7 +99,7 @@
 		 */
 		function getElements(selector){
 			if(defaults.$iFrame === null || defaults.$iFrame === undefined){
-				return $(selector);
+				return jQuery(selector);
 			}else{
 				return defaults.$iFrame.contents().find(selector);
 			}						
@@ -194,7 +194,7 @@
 			// project raw donky messages objects into model suitable for mustache template
 	        var messages = [];
 		
-	        $.each(richMessages, function(index,richMessage) {
+	        donkyCore._each(richMessages, function(index,richMessage) {
 				
 				var expired = donkyRichLogic.isRichMessageExpired(richMessage);
 				
@@ -215,7 +215,7 @@
 			var model = { 
 				// Array of messages
 				Messages: messages, 
-				// THe filter text to render back into the input field if redrawing the entire view
+				// The filter text to render back into the input field if redrawing the entire view
 				Filter: filter, 
 				// Whether to render a back button
 				BackButton: defaults.iFrameId !== null,
@@ -269,7 +269,7 @@
 					var deleteArray = [];
 					var $deleteArray = [];
 					getElements(".richMessage").each(function() {
-                        var $message = $(this);
+                        var $message = jQuery(this);
                         var $cb = $message.find("input[type=checkbox]");
                         if ($cb.is(":checked")) {
 							deleteArray.push($message.data("message-id"));
@@ -301,7 +301,7 @@
 	        // User is applying a filter to rich inbox
 	        // We store the filter incase there is a page reload and redraw the inbox 
 	        bindEvent('keyup', '#richInboxFilter', function() {
-	            var filter = $(this).val();
+	            var filter = jQuery(this).val();
 	            donkyCore.donkyData.set("DonkyRichInboxUIFilter", filter);
 				renderRichInbox(true);							                 
 	        });
@@ -322,7 +322,7 @@
 		 */
 		function bindRichInboxListEvents(){
 			bindEvent("click", ".richMessage", function(){
-	            var messageId = $(this).data("message-id");
+	            var messageId = jQuery(this).data("message-id");
 					
 				if(!editMode){
 					// If not editing, clicking a message opens it
@@ -351,7 +351,7 @@
 					}					
 				}else{
 					// If editing, clicking a message selects/unselects it
-					var $cb = $(this).find("input[type=checkbox]");
+					var $cb = jQuery(this).find("input[type=checkbox]");
 					var checked = !$cb.prop("checked");
 					$cb.prop("checked", checked);					
 					saveMessageSelectedState(messageId, checked);										 			
@@ -368,7 +368,7 @@
 	        // of the screen containing "select all" and "delete" buttons. Similar issue with the div being fixed to the bottom of the 
 	        // screen and desktop / mobile views hence the width needing to be explicitly set. 
 	        bindEvent('click', '#richInboxListContainer input[type=checkbox]', function() {	     				
-				var $cb = $(this);
+				var $cb = jQuery(this);
 				// the checkbox has an id the same as the messageId
 				saveMessageSelectedState($cb.attr('id'), $cb.is(":checked"));								                       
 	            showHideTrashCan();
@@ -408,7 +408,8 @@
 			modifyLayout(viewPortHeight);						
 	    }
 	
-	    /** User has drilled into a rich message. This action renders that message. Model is constructed from raw donky data
+	    /** 
+		 * User has drilled into a rich message. This action renders that message. Model is constructed from raw donky data
 	     * suitable for the moustache template
 		 * @param {Object} message - the rich mesage to render
 	     */
@@ -439,7 +440,7 @@
 			
 	        // User has clicked delete icon on the currently viewed rich message. Similar logic as above.
 	        bindEvent('click', '.deleteRichMessage', function() {
-	            var messageId = $(this).data("message-id");
+	            var messageId = jQuery(this).data("message-id");
                 donkyRichLogic.deleteRichMessage(messageId);
                 renderRichInbox(false);
 	        });
@@ -457,15 +458,15 @@
 			// User has clicked one of the share icons - tell donky about it
 	        bindEvent('click', '.share-icon', function(event) {
 				
-				var shareUrl = $(this).attr("href");
+				var shareUrl = jQuery(this).attr("href");
 				
 				if(shareUrl.indexOf("mailto:") === -1 ){
 					event.preventDefault();
 					PopupCenter(shareUrl, "Share Message", 640, 480);					
 				}
 				
-	            var messageId = $(this).data("message-id");
-				var sharedTo = $(this).data("shared-to");
+	            var messageId = jQuery(this).data("message-id");
+				var sharedTo = jQuery(this).data("shared-to");
                 var message = donkyRichLogic.getRichMessage(messageId);
 				if(message!==null){
 					donkyMessagingCommon.markMessageShared(message, sharedTo);								
@@ -487,12 +488,12 @@
 	     */
 	    function loadTemplates( callback ) {
 	
-	        $.get(defaults.templateURL, function(response) {
+	        jQuery.get(defaults.templateURL, function(response) {
 	
-				templates.richInboxMenuItemTemplate = $(response).filter('#richInboxMenuItemTemplate').html(); 
-	            templates.richInboxTemplate = $(response).filter('#richInboxTemplate').html();
-	            templates.richInboxListTemplate = $(response).filter('#richInboxListTemplate').html();
-	            templates.richMessageTemplate = $(response).filter('#richMessageTemplate').html();
+				templates.richInboxMenuItemTemplate = jQuery(response).filter('#richInboxMenuItemTemplate').html(); 
+	            templates.richInboxTemplate = jQuery(response).filter('#richInboxTemplate').html();
+	            templates.richInboxListTemplate = jQuery(response).filter('#richInboxListTemplate').html();
+	            templates.richMessageTemplate = jQuery(response).filter('#richMessageTemplate').html();
 		
 	            callback();
 	        });
@@ -534,7 +535,7 @@
 
 			getElements("#richInboxListContainer .richMessage").each(function(){
 				
-				var $richMessage = $(this);
+				var $richMessage = jQuery(this);
 				
 				var expiryTimestamp = $richMessage.attr("data-expiry-timestamp"); 
 				
@@ -607,8 +608,13 @@
 
 				// only care about resize if we are running in the container	
 				if( defaults.iFrameId !== null){
-					$(window).on("resize orientationchange",function(){												
-					  	modifyLayout(window.top.innerHeight);
+					jQuery(window).on("resize orientationchange",function(){												
+					  	try{
+							viewPortHeight = window.parent.innerHeight; 
+							modifyLayout(viewPortHeight);	  
+						  }catch(e){
+							  donkyCore.donkyLogging.debugLog(e);
+						  }						  
 					});						
 				}
 				
@@ -621,13 +627,21 @@
 						if( viewState.view == donkyUICommon.inboxViews.richInbox){
 							// Only render inbox view if currently on the list view ...
 							renderRichInbox(false);	
-						}						
+						}
+						// this service may be registered, if it is use it ...
+						var donkyAudio = donkyCore.getService("donkyAudio");
+						
+						if(donkyAudio !== null){
+							if(donkyCore._isFunction(donkyAudio.playSound)){
+								donkyAudio.playSound(donkyMessagingCommon.messageTypes.rich);
+							}
+						}
 		            });
 
 					// Only render view if we are not running in a container
 					if(defaults.iFrameId === null){	
 						
-						viewPortHeight = $(defaults.containerId).height(); 
+						viewPortHeight = jQuery(defaults.containerId).height(); 
 												
 						if(defaults.inboxCssUrls !== null){
 							donkyCore._each(defaults.inboxCssUrls, function(index, url){
@@ -637,12 +651,12 @@
 						
 						donkyRichInboxUI.renderView();		
 					}else{
-						defaults.$iFrame = $("#" + defaults.iFrameId);
+						defaults.$iFrame = jQuery("#" + defaults.iFrameId);
 						
 						viewPortHeight = defaults.$iFrame.height();						
 					}
 										
-					$(document).on("ViewRichMessage",function(evt, messageId) {
+					jQuery(document).on("ViewRichMessage",function(evt, messageId) {
 						deletePendingInboxPushNotifications();
 						var message = donkyRichLogic.getRichMessage(messageId);
 						// may have been garbage collected
@@ -657,7 +671,7 @@
 						}						
 					});
 					
-					$(document).on("ViewRichInbox",function(evt) {
+					jQuery(document).on("ViewRichInbox",function(evt) {
 						deletePendingInboxPushNotifications();
 						renderRichInbox(false);
 					});					

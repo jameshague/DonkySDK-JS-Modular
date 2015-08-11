@@ -124,15 +124,15 @@ var DonkyNetwork = (function() {
             throw new Error("jQuery not found");
         }
 
-        if (donkyCore._versionCompare($.fn.jquery, "1.7") < 0) {
+        if (donkyCore._versionCompare(jQuery.fn.jquery, "1.7") < 0) {
             throw new Error("jQuery varsion too old - require minimum version of 1.7");
         }
 
-        if (window.$.signalR === undefined) {
-            throw new Error("jQuery not found");
+        if (window.jQuery.signalR === undefined) {
+            throw new Error("signalR not found");
         }
 
-        if (donkyCore._versionCompare(window.$.signalR.version, "2.2.0") < 0) {
+        if (donkyCore._versionCompare(window.jQuery.signalR.version, "2.2.0") < 0) {
             throw new Error("signalR varsion too old - require minimum version of 2.2.0");
         }
 
@@ -317,7 +317,7 @@ var DonkyNetwork = (function() {
         var environment = donkyCore.donkyData.get("environment");
         var scheme = donkyCore.donkyData.get("scheme");
 
-        var jqxhr = $.ajax({
+        var jqxhr = jQuery.ajax({
                 url: scheme + environment + api + method,
                 type: type,
                 beforeSend: function(xhr) {
@@ -389,7 +389,7 @@ var DonkyNetwork = (function() {
             signalrState = signalrStatuses.initializing;
             var accessDetails = donkyCore.donkyData.get("accessDetails");
 
-			signalrConnection = $.hubConnection(accessDetails.signalRUrl, {useDefaultPath:false});
+			signalrConnection = jQuery.hubConnection(accessDetails.signalRUrl, {useDefaultPath:false});
 			signalrConnection.qs = { "access_token": accessDetails.accessToken };
 
             if (donkyCore.donkyLogging._getLogLevel() >= donkyCore.donkyLogging.logLevel.Info ) {
@@ -398,19 +398,19 @@ var DonkyNetwork = (function() {
 
             signalrConnection.stateChanged(function (change) {
                 switch (change.newState) {
-                    case $.signalR.connectionState.connecting:
+                    case jQuery.signalR.connectionState.connecting:
                         donkyCore.donkyLogging.debugLog('The server is connecting');
                         signalrState = signalrStatuses.starting;
                         break;
-                    case $.signalR.connectionState.connected:
+                    case jQuery.signalR.connectionState.connected:
                         donkyCore.donkyLogging.debugLog('The server is connected');
                         signalrState = signalrStatuses.started;
                         break;
-                    case $.signalR.connectionState.reconnecting:
+                    case jQuery.signalR.connectionState.reconnecting:
                         donkyCore.donkyLogging.debugLog('The server is reconnecting');
                         signalrState = signalrStatuses.starting;
                         break;
-                    case $.signalR.connectionState.disconnected:
+                    case jQuery.signalR.connectionState.disconnected:
                         donkyCore.donkyLogging.debugLog('The server is disconnected');
                         signalrState = signalrStatuses.stopped;
                         break;

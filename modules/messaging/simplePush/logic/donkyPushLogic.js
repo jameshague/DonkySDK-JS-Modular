@@ -120,7 +120,7 @@
 		    findObj: function(id){
 			    var pushMessages = this.load();
 			    var messsage = null;
-			    $.each(pushMessages, function(index,item){
+			    donkyCore._each(pushMessages, function(index,item){
                 
 				    if(item.id == id){
 					    messsage = item;
@@ -137,7 +137,7 @@
 			 */
 		    findId: function(pushMessages, id){
 			    var found = -1;
-			    $.each(pushMessages, function(index,item){
+			    donkyCore._each(pushMessages, function(index,item){
 				    if(item.id == id){
 					    found = index;
 				    }
@@ -234,6 +234,208 @@
 		// donkyPushLogic
 		//====================
 
+        function QueueNewRichMessagesPopup(event){
+            var messages = event.data;
+            if(donkyCore.isModuleRegistered("DonkyRichInboxUI") ){    
+                
+                // any non - silent notifications ?
+                var silent = true;
+                donkyCore._each(messages, function(index, message){
+                    if(!message.silentNotification){
+                        silent = false;
+                    }
+                });
+                                                        
+                if(defaults.showRichMessagePopup && !silent){
+                    var containerService = donkyCore.getService("donkyInboxContainerUIService");
+                    var donkyRichLogic = donkyCore.getService("donkyRichLogic");
+                    
+                    if (donkyRichLogic !== null && containerService !== null && !containerService.isOpen()) {
+    
+                        var dummy;
+                        
+                        if(messages.length == 1){
+                            dummy = {
+                                creator: "newRichMessages",
+                                id: messages[0].serverNotificationId,
+                                type: "SimplePushMessage",
+                                data: {
+                                    messageType: "SimplePush",
+                                    avatarAssetId: messages[0].avatarAssetId,
+                                    buttonSets: [
+                                        {
+                                            buttonSetId: null,
+                                            platform: "Web",
+                                            interactionType: "TwoButton",
+                                            buttonSetActions: [
+                                                {
+                                                    actionType: "Javascript",
+                                                    data: null,
+                                                    label: defaults.richMessagePopupDismissText
+                                                },
+                                                {
+                                                    /*Javascript*/
+                                                    actionType: "Javascript",
+                                                    /*code to execute*/
+                                                    data: btoa("jQuery(document).trigger('ViewRichMessage', ['" + messages[0].messageId + "']);"),
+                                                    label: defaults.richMessagePopupViewText
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
+                                    body: messages[0].description,
+                                    expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
+                                },
+                                "createdOn": messages[0].sentTimestamp
+                            };
+                        }else{
+                            dummy = {
+                                creator: "newRichMessages",
+                                id: donkyCore._uuid(),
+                                type: "SimplePushMessage",
+                                data: {
+                                    messageType: "SimplePush",
+                                    avatarAssetId: null,
+                                    buttonSets: [
+                                        {
+                                            buttonSetId: null,
+                                            platform: "Web",
+                                            interactionType: "TwoButton",
+                                            buttonSetActions: [
+                                                {
+                                                    actionType: "Javascript",
+                                                    data: null,
+                                                    label: defaults.richMessagePopupDismissText
+                                                },
+                                                {
+                                                    /*Javascript*/
+                                                    actionType: "Javascript",
+                                                    /*code to execute*/
+                                                    data: btoa("jQuery(document).trigger('ViewRichInbox');"),
+                                                    label: defaults.richMessagePopupViewText
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
+                                    body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
+                                    expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
+                                },
+                                "createdOn": messages[0].sentTimestamp
+                            };
+                            
+                        }   
+                        
+                        processPushMessages([dummy]);                 
+    
+                    }
+                }
+            }                            
+        }
+
+        function QueueNewChatMessagesPopup(event){
+            var messages = event.data;
+            if(donkyCore.isModuleRegistered("DonkyChatInboxUI") ){    
+                
+                // any non - silent notifications ?
+                var silent = true;
+                donkyCore._each(messages, function(index, message){
+                    if(!message.silentNotification){
+                        silent = false;
+                    }
+                });
+                                                        
+                if(defaults.showRichMessagePopup && !silent){
+                    var containerService = donkyCore.getService("donkyInboxContainerUIService");
+                    var donkyChatLogic = donkyCore.getService("donkyChatLogic");
+                    
+                    if (donkyChatLogic !== null && containerService !== null && !containerService.isOpen()) {
+    
+                        var dummy;
+                        
+                        if(messages.length == 1){
+                            dummy = {
+                                creator: "newChatMessages",
+                                id: messages[0].serverNotificationId,
+                                type: "SimplePushMessage",
+                                data: {
+                                    messageType: "SimplePush",
+                                    avatarAssetId: messages[0].avatarAssetId,
+                                    buttonSets: [
+                                        {
+                                            buttonSetId: null,
+                                            platform: "Web",
+                                            interactionType: "TwoButton",
+                                            buttonSetActions: [
+                                                {
+                                                    actionType: "Javascript",
+                                                    data: null,
+                                                    label: defaults.richMessagePopupDismissText
+                                                },
+                                                {
+                                                    /*Javascript*/
+                                                    actionType: "Javascript",
+                                                    /*code to execute*/
+                                                    data: btoa("jQuery(document).trigger('ViewChatMessage', ['" + messages[0].conversationId + "']);"),
+                                                    label: defaults.richMessagePopupViewText
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
+                                    body: messages[0].description,
+                                    expiryTimeStamp: messages[0].expiryTimeStamp
+                                },
+                                "createdOn": messages[0].sentTimestamp
+                            };
+                        }else{
+                            dummy = {
+                                creator: "newChatMessages",
+                                id: donkyCore._uuid(),
+                                type: "SimplePushMessage",
+                                data: {
+                                    messageType: "SimplePush",
+                                    avatarAssetId: null,
+                                    buttonSets: [
+                                        {
+                                            buttonSetId: null,
+                                            platform: "Web",
+                                            interactionType: "TwoButton",
+                                            buttonSetActions: [
+                                                {
+                                                    actionType: "Javascript",
+                                                    data: null,
+                                                    label: defaults.richMessagePopupDismissText
+                                                },
+                                                {
+                                                    /*Javascript*/
+                                                    actionType: "Javascript",
+                                                    /*code to execute*/
+                                                    data: btoa("jQuery(document).trigger('ViewChatInbox');"),
+                                                    label: defaults.richMessagePopupViewText
+                                                }
+                                            ]
+                                        }
+                                    ],
+                                    senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
+                                    body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
+                                    expiryTimeStamp: messages[0].expiryTimeStamp
+                                },
+                                "createdOn": messages[0].sentTimestamp
+                            };
+                            
+                        }   
+                        
+                        processPushMessages([dummy]);                 
+    
+                    }
+                }
+            }                            
+            
+        }
+
+
 		/**
 		 * @class DonkyPushLogic
 		 */
@@ -262,104 +464,12 @@
             // donkyPushUI can display a popup directing the user to the inbox 
             
             donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event){
-                var messages = event.data;
-                if(donkyCore.isModuleRegistered("DonkyRichInboxUI") ){    
-                    
-                    // any non - silent notifications ?
-                    var silent = true;
-                    donkyCore._each(messages, function(index, message){
-                        if(!message.silentNotification){
-                            silent = false;
-                        }
-                    });
-                                                            
-                    if(defaults.showRichMessagePopup && !silent){
-                        var containerService = donkyCore.getService("donkyInboxContainerUIService");
-                        var donkyRichLogic = donkyCore.getService("donkyRichLogic");
-                        
-                        if (donkyRichLogic !== null && containerService !== null && !containerService.isOpen()) {
-        
-                            var dummy;
-                            
-                            if(messages.length == 1){
-                                dummy = {
-                                    creator: "newRichMessages",
-                                    id: messages[0].serverNotificationId,
-                                    type: "SimplePushMessage",
-                                    data: {
-                                        messageType: "SimplePush",
-                                        avatarAssetId: messages[0].avatarAssetId,
-                                        buttonSets: [
-                                            {
-                                                buttonSetId: null,
-                                                platform: "Web",
-                                                interactionType: "TwoButton",
-                                                buttonSetActions: [
-                                                    {
-                                                        actionType: "Javascript",
-                                                        data: null,
-                                                        label: defaults.richMessagePopupDismissText
-                                                    },
-                                                    {
-                                                        /*Javascript*/
-                                                        actionType: "Javascript",
-                                                        /*code to execute*/
-                                                        data: btoa("$(document).trigger('ViewRichMessage', ['" + messages[0].messageId + "']);"),
-                                                        label: defaults.richMessagePopupViewText
-                                                    }
-                                                ]
-                                            }
-                                        ],
-                                        senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
-                                        body: messages[0].description,
-                                        expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
-                                    },
-                                    "createdOn": messages[0].sentTimestamp
-                                };
-                            }else{
-                                dummy = {
-                                    creator: "newRichMessages",
-                                    id: donkyCore._uuid(),
-                                    type: "SimplePushMessage",
-                                    data: {
-                                        messageType: "SimplePush",
-                                        avatarAssetId: null,
-                                        buttonSets: [
-                                            {
-                                                buttonSetId: null,
-                                                platform: "Web",
-                                                interactionType: "TwoButton",
-                                                buttonSetActions: [
-                                                    {
-                                                        actionType: "Javascript",
-                                                        data: null,
-                                                        label: defaults.richMessagePopupDismissText
-                                                    },
-                                                    {
-                                                        /*Javascript*/
-                                                        actionType: "Javascript",
-                                                        /*code to execute*/
-                                                        data: btoa("$(document).trigger('ViewRichInbox');"),
-                                                        label: defaults.richMessagePopupViewText
-                                                    }
-                                                ]
-                                            }
-                                        ],
-                                        senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
-                                        body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
-                                        expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
-                                    },
-                                    "createdOn": messages[0].sentTimestamp
-                                };
-                                
-                            }   
-                            
-                            processPushMessages([dummy]);                 
-        
-                        }
-                    }
-                }                
+                QueueNewRichMessagesPopup(event);
             });   
+            
+            donkyCore.subscribeToLocalEvent("NewChatMessagesReceived", function(event){
+                QueueNewChatMessagesPopup(event);
+            });
             
             donkyCore.subscribeToLocalEvent("NewDeviceAddedToUser", function(event){
                 var message = event.data;
@@ -439,7 +549,7 @@
                     if (buttonText !== "" && (pushMessage.creator === undefined || pushMessage.creator === null)) {
                         var webButtonSet = {};
 
-                        $.each(data.buttonSets, function(index, buttonSet) {
+                        donkyCore._each(data.buttonSets, function(index, buttonSet) {
                             if (buttonSet.platform == "Web") {
                                 webButtonSet = buttonSet;
                             }

@@ -6,7 +6,7 @@
  */
 
 (function () {
-	var factory = function (donkyCore, donkyPushLogic, donkyUICommon, Mustache) {
+	var factory = function (donkyCore, donkyPushLogic, donkyUICommon, Mustache, donkyMessagingCommon) {
 
 	    if (donkyCore === undefined) {
 	        throw new Error("Missing donkyCore");
@@ -22,6 +22,10 @@
 
 	    if (Mustache === undefined) {
 	        throw new Error("Missing Mustache");
+	    }
+
+	    if (donkyMessagingCommon === undefined) {
+	        throw new Error("Missing donkyMessagingCommon");
 	    }
 
 	    var donkyPushUI;
@@ -78,7 +82,7 @@
 			 */
             remove: function() {
 
-                var $iframe = $("#"+defaults.iframeId);
+                var $iframe = jQuery("#"+defaults.iframeId);
 
                 var self = this;
 
@@ -112,13 +116,13 @@
 				
                 var buttons = [];
 
-                if ($.isArray(message.buttonSets) && message.buttonSets.length > 0) {
+                if (donkyCore._isArray(message.buttonSets) && message.buttonSets.length > 0) {
 
-                    $.each(message.buttonSets, function(index, buttonSet) {
+                    donkyCore._each(message.buttonSets, function(index, buttonSet) {
 
                         if (buttonSet.platform == "Web") {
 
-                            $.each(buttonSet.buttonSetActions, function(index, action) {
+                            donkyCore._each(buttonSet.buttonSetActions, function(index, action) {
 
                                 var button = {
                                     buttonText: action.label
@@ -151,7 +155,7 @@
 
                 var buttonHtml = "";
                 var buttonAttribs = "";
-                $.each(buttons, function(index, button) {
+                donkyCore._each(buttons, function(index, button) {
                     if (button.linkURL !== undefined) {
                         if (button.linkURL.indexOf("http") === 0) {
                             // this is a fully qualified url
@@ -232,15 +236,15 @@
             $('#"+defaults.iframeId+"', window.parent.document).height(outerHeight + 'px');\
             " + animationJS + "\
             $('.donkyBannerButton, .bannerClose').click(function(){\
-                window.parent.$(window.parent.document).trigger('donkyNotificationButtonClicked', [$(this).data('notification-id'), $(this).text(), $(this).data('url'),  $(this).data('action-type')]);\
+                window.parent.jQuery(window.parent.document).trigger('donkyNotificationButtonClicked', [$(this).data('notification-id'), $(this).text(), $(this).data('url'),  $(this).data('action-type')]);\
             });\
         });\
     </script>\
     </html>";
 
-                $("body").append("<iframe id='"+defaults.iframeId+ "' frameborder='0' scrolling='no' ></iframe>");
+                jQuery("body").append("<iframe id='"+defaults.iframeId+ "' frameborder='0' scrolling='no' ></iframe>");
 
-                donkyUICommon.renderIframeSrcDoc($("#"+defaults.iframeId), iframeTemplate, function(){
+                donkyUICommon.renderIframeSrcDoc(jQuery("#"+defaults.iframeId), iframeTemplate, function(){
                     // TODO: calc iframe height and resize ?
                 });
 
@@ -277,7 +281,7 @@
                 } else {
                     var self = this;
                     // Download the template ...
-                    $.get(defaults.templateURL, function(template) {
+                    jQuery.get(defaults.templateURL, function(template) {
                         defaults.template = template;
                         self._renderPushMessage(defaults.template, model, animate);
                     });
@@ -326,20 +330,29 @@
                         function(event){                     
 				            donkyCore.donkyLogging.infoLog("NewSimplePushMessagesReceived");
 
+    						// this service may be registered, if it is use it ...
+    						var donkyAudio = donkyCore.getService("donkyAudio");
+                            
+    						if(donkyAudio !== null){
+                                if(donkyCore._isFunction(donkyAudio.playSound)){
+                                    donkyAudio.playSound(donkyMessagingCommon.messageTypes.simplePush);
+                                }
+    						}
+
 				            if (!pushBannerManager.isDisplayingBanner()) {
 					            pushBannerManager.renderNextBanner(true);
 				            } else {
 					            // Update badge with new unread count
 					            var pushMessageCount = donkyPushLogic.getMessageCount();
 					            var unreadCount = pushMessageCount - 1;
-					            $("#donkySimplePushIframe").contents().find(".badge").text(unreadCount);
+					            jQuery("#donkySimplePushIframe").contents().find(".badge").text(unreadCount);
 				            }
                         }
                     );
                 
                 // TODO: remove the JS in the iframe and wire in from here ?
                 
-                $(document).on("donkyNotificationButtonClicked", function(evt, notificationId, buttonText, url, action) {
+                jQuery(document).on("donkyNotificationButtonClicked", function(evt, notificationId, buttonText, url, action) {
                     
                    var dets = {
                         notificationId: notificationId,
@@ -391,11 +404,12 @@
 	};
 
 	if (typeof define === 'function' && define.amd) {
-		define('donkyPushUI', ['donkyCore', 'donkyPushLogic', 'donkyUICommon', 'Mustache' ], function(donkyCore, donkyPushLogic, donkyUICommon, Mustache) { 
-            return factory(donkyCore, donkyPushLogic, donkyUICommon, Mustache); 
+		define('donkyPushUI', ['donkyCore', 'donkyPushLogic', 'donkyUICommon', 'Mustache', 'donkyMessagingCommon' ], 
+            function(donkyCore, donkyPushLogic, donkyUICommon, Mustache, donkyMessagingCommon) { 
+            return factory(donkyCore, donkyPushLogic, donkyUICommon, Mustache, donkyMessagingCommon); 
         });
 	} else {
-		window.donkyPushUI = factory(window.donkyCore, window.donkyPushLogic, window.donkyUICommon, window.Mustache);
+		window.donkyPushUI = factory(window.donkyCore, window.donkyPushLogic, window.donkyUICommon, window.Mustache, window.donkyMessagingCommon);
 	}
 
 }());

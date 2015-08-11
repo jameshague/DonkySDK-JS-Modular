@@ -63,6 +63,7 @@ Donky-Core-SDK is available under the MIT license. See the LICENSE file for more
 * [Moustache](https://mustache.github.io/) (for UI modules)
 * [Require.js](http://requirejs.org/) (Recommended for dependency management but not mandatory)
 
+
 # Getting Started
 
 ### Prerequisite dependencies
@@ -96,9 +97,9 @@ We host all our releases on a cdn so you can simply reference that. You can refe
 For a named version do the following: 
 
 * Identify which release you want to use by browsing the [releases](https://github.com/Donky-Network/DonkySDK-JS-Modular/releases) section in Github
-* reference the release in the following manner - for example if you wish to use the 2.0.0.1 release:
+* reference the release in the following manner - for example if you wish to use the 2.2.0.0 release:
 ```html
-<script src="https://cdn.dnky.co/sdk/2.0.0.1/modules/require-config.js"></script>
+<script src="https://cdn.dnky.co/sdk/2.2.0.0/modules/require-config.js"></script>
 ```
 * If you just wish to use the latest (bearing in mind that this will periodically change) do this:
 ```html
@@ -124,7 +125,7 @@ This provides the basics of any Donkyintegration into your apps.  The Core SDK i
 
 
 # DonkyCore interfaces
-DonkyCore is a compisite interface that contains functionality broken down into functional areas described below:
+DonkyCore is a composite interface that contains functionality broken down into functional areas described below:
 
 | Interface       		                                            | Example Usage| Description |
 |:------------- 		                                            |:------       |:------------|
@@ -176,8 +177,9 @@ This allows an integrator to potentially write their own UI from scratch if they
 | [Receive content](#receive-content)  | Receive a custom message  	|
 | [Automation](#automation)  | Execute a third party trigger 	|
 | [Simple push](#simple-push)  | Receive and display a simple push message 	|
-| [Rich popup](#rich-popup)  | Reseive a rich message and display it in a popup 	|
-| [Rich inbox](#rich-inbox)  | Reseive a rich message and display it in an inbox 	|
+| [Rich popup](#rich-popup)  | Receive a rich message and display it in a popup 	|
+| [Rich inbox](#rich-inbox)  | Receive a rich message and display it in an inbox 	|
+| [Rich inbox, Simple push with audio](##rich-inbox--simple-push)  | Receive a rich message and display it in an inbox and play a sound 	|
 
 ## Initialise anonymously
 This example initialises Donky anonymously. 
@@ -438,13 +440,23 @@ JS Specific API docs for [donkyRichInboxUI](http://cdn.dnky.co/sdk/latest-modula
 and [donkyInboxContainerUI](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyInboxContainerUI.html).
 
 
-## Rich Inbox & Simple Push 
+## Rich Inbox, Simple Push and Audio 
    
-You can also easily combine Push and Rich messages as in this code sample: 
+You can also easily combine Push and Rich message functionality in the same app. 
+If you want to have a sound played when a message is received, this can also be done with the donkyAudio interface.
+A soundfile can be configured against a particular message type. Notice the usage of the enum "messageTypes" in donkyMessagingCommon.
+This is implemented using HTML5 Audio: regarding supported file formats, this is down to the browser the client is using. See [this wikipedia](https://en.wikipedia.org/wiki/HTML5_Audio) 
+article for a list of supported audio formats for all the common browsers. 
+ 
    
 ```javascript
-require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore', 'donkyCoreAnalytics'],
-    function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics) {
+require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore', 'donkyCoreAnalytics', 'donkyMessagingCommon', 'donkyAudio'],
+    function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics, donkyMessagingCommon, donkyAudio) {
+
+    // Configure audio files - we can assign different files to different message types. 
+    donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, "../audio/donkey.wav");
+    donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, "../audio/Pling.mp3");
+        
     // Initialise Donky (anonymously)
     // We create donkyCoreAnalytics to provide some data, you don't need to do anything, just instanciate it.
     donkyCore.initialise({
@@ -462,6 +474,7 @@ require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore'
     });    
 });
 ```
+Documentation for donkyAudio here[here](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyAudio.html)
 
 # Grunt
 To build the release yourself and host yourself follow these steps:

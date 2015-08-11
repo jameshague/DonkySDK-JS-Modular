@@ -76,7 +76,7 @@
 			 */			
             remove: function() {
 
-                var $iframe = $("#"+defaults.iframeId);
+                var $iframe = jQuery("#"+defaults.iframeId);
 
                 var self = this;
 
@@ -133,16 +133,16 @@
     <script>\
         $(function(){\
             $('.popupClose').click(function(){\
-                window.parent.$(window.parent.document).trigger('DonkyRichPopupClosed', [$(this).data('message-id'), $(this).text()]);\
+                window.parent.jQuery(window.parent.document).trigger('DonkyRichPopupClosed', [$(this).data('message-id'), $(this).text()]);\
             });\
         });\
     </script>\
 </html>";
 
-                $("body").append("<iframe id='" + defaults.iframeId + "' seamless='seamless' frameborder='0' scrolling='no' ></iframe>");
+                jQuery("body").append("<iframe id='" + defaults.iframeId + "' seamless='seamless' frameborder='0' scrolling='no' ></iframe>");
             
                 // An iframe in an iframe ....
-                donkyUICommon.renderIframeSrcDoc($("#"+defaults.iframeId), iframeTemplate, function($frame) {
+                donkyUICommon.renderIframeSrcDoc(jQuery("#"+defaults.iframeId), iframeTemplate, function($frame) {
                     donkyUICommon.renderIframeSrcDoc($frame.contents().find("#RichMessage"), model.Body);
                 });
             },
@@ -179,7 +179,7 @@
                 } else {
                     var self = this;
 
-                    $.get(defaults.templateURL, function(template) {
+                    jQuery.get(defaults.templateURL, function(template) {
                         defaults.template = template;
                         self._renderRichPopup(message.messageId, defaults.template, model);
                     });
@@ -227,12 +227,12 @@
 				            } else {
 					            // Update badge with new unread count
 					            var messageCount = donkyRichLogic.getMessageCount();
-					            $("#"+defaults.iframeId).contents().find(".badge").text(messageCount.unreadRichMessageCount);
+					            jQuery("#"+defaults.iframeId).contents().find(".badge").text(messageCount.unreadRichMessageCount);
 				            }
                         }
                     );
 
-                $(document).on("DonkyRichPopupClosed",function(evt, messageId) {
+                jQuery(document).on("DonkyRichPopupClosed",function(evt, messageId) {
                     donkyCore.donkyLogging.infoLog("DonkyRichPopupClosed: " + messageId);
 
                     donkyRichLogic.markRichMessageRead(messageId);

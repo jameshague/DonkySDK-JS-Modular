@@ -24,6 +24,7 @@ module.exports = function (grunt) {
 					{ 'src': 'modules/core/donkyCore.js', 'dest': outputDirectory + 'modules/core/donkyCore.min.js' },
 					{ 'src': 'modules/automation/donkyAutomation.js', 'dest': outputDirectory + 'modules/automation/donkyAutomation.min.js' },
 					{ 'src': 'modules/coreAnalytics/donkyCoreAnalytics.js', 'dest': outputDirectory + 'modules/coreAnalytics/donkyCoreAnalytics.min.js' },
+					{ 'src': 'modules/messaging/common/logic/donkyAudio.js', 'dest': outputDirectory + 'modules/messaging/common/logic/donkyAudio.min.js' },
 					{ 'src': 'modules/messaging/common/logic/donkyMessagingCommon.js', 'dest': outputDirectory + 'modules/messaging/common/logic/donkyMessagingCommon.min.js' },
 					{ 'src': 'modules/messaging/simplePush/logic/donkyPushLogic.js', 'dest': outputDirectory + 'modules/messaging/simplePush/logic/donkyPushLogic.min.js' },
 					{ 'src': 'modules/messaging/common/ui/donkyUICommon.js', 'dest': outputDirectory + 'modules/messaging/common/ui/donkyUICommon.min.js' },
@@ -71,7 +72,8 @@ module.exports = function (grunt) {
 					{ expand: true, src: ['modules/**'], dest: outputDirectory },
 					{ expand: true, src: ['dependencies/*'], dest: outputDirectory, filter: 'isFile' },
 					{ expand: true, src: ['images/*'], dest: outputDirectory, filter: 'isFile' },
-					{ expand: true, src: ['templates/*'], dest: outputDirectory, filter: 'isFile' }
+					{ expand: true, src: ['templates/*'], dest: outputDirectory, filter: 'isFile' },
+					{ expand: true, src: ['audio/*'], dest: outputDirectory, filter: 'isFile' }
 				],
 			},
 			css: {
@@ -118,6 +120,7 @@ module.exports = function (grunt) {
 			'modules/core/donkySharedTypes.js',
 			'modules/automation/donkyAutomation.js',
 			'modules/coreAnalytics/donkyCoreAnalytics.js',
+			'modules/messaging/common/logic/donkyAudio.js',
 			'modules/messaging/common/logic/donkyMessagingCommon.js',
 			'modules/messaging/simplePush/logic/donkyPushLogic.js',
 			'modules/messaging/common/ui/donkyUICommon.js',
