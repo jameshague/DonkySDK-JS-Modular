@@ -454,8 +454,8 @@ require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore'
     function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics, donkyMessagingCommon, donkyAudio) {
 
     // Configure audio files - we can assign different files to different message types. 
-    donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, "../audio/donkey.wav");
-    donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, "../audio/Pling.mp3");
+    donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, donkyCore.installDir + "audio/donkey.wav");
+    donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, donkyCore.installDir + "audio/Pling.mp3");
         
     // Initialise Donky (anonymously)
     // We create donkyCoreAnalytics to provide some data, you don't need to do anything, just instanciate it.
