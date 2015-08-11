@@ -204,7 +204,7 @@ To read more about Donky Modular SDK go [here](http://docs.mobiledonky.com/docs/
 JS Specific API docs for [initialize()](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyCore.html#initialise). 
 
 
-## Initialize (known user)
+## Initialise (known user)
 This example initialises Donky with a known user.
 ```javascript
 require(['donkyCore'],function(donkyCore) {
