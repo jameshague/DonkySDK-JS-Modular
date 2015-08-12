@@ -210,7 +210,7 @@ This example initialises Donky with a known user.
 require(['donkyCore'],function(donkyCore) {
     donkyCore.initialise({
         apiKey: ">>>Enter API Key here<<<",
-        userInfo: {
+        userDetails: {
             id: "johnsmith",
             displayName: "John Smith",
             firstName: "John",
@@ -301,7 +301,7 @@ require(['donkyCore'],function(donkyCore) {
     
     donkyCore.initialise({
         apiKey: ">>>Enter API Key here<<<",
-        userInfo: {
+        userDetails: {
             id: "johnsmith",
             displayName: "John Smith",
             firstName: "John",
