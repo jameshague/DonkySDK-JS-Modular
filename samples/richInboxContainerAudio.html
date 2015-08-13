@@ -5,15 +5,15 @@
     <meta http-equiv='X-UA-Compatible' content='IE=edge' />
     <meta name='viewport' content='width=device-width, initial-scale=1' />
     <title>Inbox</title>
-    <script src="https://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
     <script>
         $.noConflict();
         // Code that uses other library's $ can follow here.
     </script>                                     
-    <script src="../dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
-    <!--<script src="../modules/require-config.js"></script>-->
-    <script src="../modules/require-config-debug.js"></script>
+    <!--<script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config.js"></script>-->
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config-debug.js"></script>
     <style type="text/css">
         /*IE 10+ scrollbar obscuring the inbox!*/
         body{-ms-overflow-style: scrollbar !important;} 
@@ -48,8 +48,8 @@
         require(['donkyRichInboxUI','donkyInboxContainerUI', 'donkyPushUI','donkyCore', 'donkyCoreAnalytics','donkyMessagingCommon', 'donkyAudio'],
             function(donkyRichInboxUI, donkyInboxContainerUI, donkyPushUI, donkyCore, donkyCoreAnalytics, donkyMessagingCommon, donkyAudio) {
 
-            donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, "../audio/donkey.wav");
-            donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, "../audio/Pling.mp3");
+            donkyAudio.setSound(donkyMessagingCommon.messageTypes.simplePush, "https://cdn.dnky.co/sdk/latest-modular/audio/donkey.wav");
+            donkyAudio.setSound(donkyMessagingCommon.messageTypes.rich, "https://cdn.dnky.co/sdk/latest-modular/audio/Pling.mp3");
 
             // Initialise Donky (anonymously)
             donkyCore.initialise({
