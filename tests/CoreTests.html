@@ -33,8 +33,8 @@
   
 <script>
 
-    var apikey1 = ">>ENTER API KEY HERE<<";
-    var apikey2 = ">>ENTER API KEY HERE<<";
+    var apikey1 = ">>ENTER YOUR API KEY HERE<<";
+    var apikey2 = ">>ENTER YOUR API KEY HERE<<";
 
 
     var defaultUserDetails = {
@@ -1560,6 +1560,29 @@
             });
         });
     });
+
+
+    QUnit.test( "Check initialize fails if called concurrently", function( assert ) {
+        var done = assert.async();
+
+        initializeDonky(true, defaultUserDetails, defaultDeviceDetails, function() {
+            // leave in a good state for next test
+            donkyCore.donkyNetwork._stopSignalR(function(){
+                done();  
+            });                     
+
+        });
+
+        initializeDonky(false, defaultUserDetails, defaultDeviceDetails, function(donkyCore, result) {
+            assert.ok( result.succeeded === false, "result.succeeded should be set to false" );
+        });
+
+
+    });
+
+
+
+
 
     QUnit.test( "Check initialize works if repeatedly and with no args ", function( assert ) {
         var done = assert.async();

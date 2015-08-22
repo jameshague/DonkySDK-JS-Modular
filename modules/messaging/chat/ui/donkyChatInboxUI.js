@@ -61,7 +61,7 @@
 		 */
 		function getElements(selector, $iFrame){
 			if($iFrame === null || $iFrame === undefined){
-				return $(selector);
+				return jQuery(selector);
 			}else{
 				return $iFrame.contents().find(selector);
 			}						
@@ -96,10 +96,10 @@
 	     */
 	    function loadTemplates( callback ) {
 	
-	        $.get(defaults.templateURL, function(response) {
+	        jQuery.get(defaults.templateURL, function(response) {
 	
-				templates.chatInboxTemplate = $(response).filter('#chatInboxTemplate').html(); 
-				templates.chatInboxMenuItemTemplate = $(response).filter('#chatInboxMenuItemTemplate').html();
+				templates.chatInboxTemplate = jQuery(response).filter('#chatInboxTemplate').html(); 
+				templates.chatInboxMenuItemTemplate = jQuery(response).filter('#chatInboxMenuItemTemplate').html();
 	            callback();
 	        });
 	    }
@@ -147,7 +147,7 @@
 							
 						donkyChatInboxUI.renderView();		
 					}else{
-						defaults.$iFrame = $("#" + defaults.iFrameId);
+						defaults.$iFrame = jQuery("#" + defaults.iFrameId);
 					}
 				});
 			},

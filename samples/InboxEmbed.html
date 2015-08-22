@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>rich Inbhox</title>
+    <script src="https://code.jquery.com/jquery-1.8.3.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>                                 
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config-debug.js"></script>
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <!-- Some css to style the dummy content -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.dnky.co/sdk/latest-modular/css/Blog.css">
+    <style type="text/css">
+        /* This is the styling for the inbox container div and iframe.
+        */
+        
+        #inbox-container {
+            height: 400px;
+            box-shadow: 0px 5px 20px 5px #CCC;
+        }        
+
+      </style>
+</head>
+<body>
+    
+<nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Project name</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <form class="navbar-form navbar-right">
+            <div class="form-group">
+              <input type="text" placeholder="Email" class="form-control">
+            </div>
+            <div class="form-group">
+              <input type="password" placeholder="Password" class="form-control">
+            </div>
+            <button type="submit" class="btn btn-success">Sign in</button>
+          </form>
+        </div><!--/.navbar-collapse -->
+      </div>
+    </nav>
+
+    <!-- Main jumbotron for a primary marketing message or call to action -->
+    <div class="jumbotron">
+      <div class="container">
+        <h1>Hello, world!</h1>
+        <p>This is an example for how the Donky Container can be embedded into any page in any div.</p>
+        <p id="userInfoParagraph"></p>
+        <p><a class="btn btn-primary btn-lg" href="http://docs.mobiledonky.com/docs/inbox-integration-options" role="button">Learn more &raquo;</a></p>
+      </div>
+    </div>
+
+    <div class="container">
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="col-md-4">
+          <div id="inbox-container">
+          </div>
+        </div>
+        <div class="col-md-4">
+          <h2>Interesting content</h2>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+       </div>
+        <div class="col-md-4">
+          <h2>Some more content</h2>
+          <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+        </div>
+      </div>
+
+      <hr>
+
+      <footer>
+        <p>&copy; Company 2014</p>
+      </footer>
+    </div> 
+    	
+    <script>
+        
+        /*
+            use require.js to pull in the required donky modules:
+            
+            donkyCore - need this to do anything
+            
+            donkyRichInboxUI - this module implements the rich Inbox
+            
+            donkyCoreAnalytics - this module implements some basic analytics (just need to create it)
+        
+        */
+        require(['donkyRichInboxUI', 'donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytics'],
+            function(donkyRichInboxUI, donkyInboxEmbedUI, donkyCore, donkyCoreAnalytics) {
+            // Initialise Donky (anonymously)
+            donkyCore.initialise({
+                
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+
+                    if(result.succeeded) {
+                        // Get the current username and display on the screen so we can target this user with a campaign.
+                        var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                        // insere the userid into the jumbotron so you can target that user with messages for testing purposes
+                        jQuery("#userInfoParagraph").text("Send push message from campaign Builder to \""+registrationDetails.userDetails.id+"\"");
+
+                        // Initialise the donkyRichInboxUI module
+                        donkyRichInboxUI.initialise();
+                       
+
+                        var options = {
+                            /**
+                            * This is the div that we will insert the inbox into
+                            */
+                            iFrameContainer: "inbox-container",
+                            /**
+                            * We only have a single view and we don't require an index page to be rendered
+                            */                                             
+                            showIndexPage: false
+                         };
+                        
+                        // Initialise the donkyInboxContainerUI module - note that we pass in the donkyRichInboxUI module in an array.
+                        // The job of the container is to host various views - we are just supplying the rich inbox view. 
+                        // in this demo, we are passing in some config in the second parameter. Seeing that there is only a single view, 
+                        // an index page is unnecessary so we are telling the container not to display the index page
+                        donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);
+						
+                        // click handler for the synchronise button, allows us to sync whenever we want
+						jQuery("#synchroniseButton").click(function(){
+							donkyCore.donkyNetwork.synchronise();
+						});		
+                        
+                        // click handler for show / hide button
+						jQuery("#toggleButton").click(function(){							
+                            jQuery("#donkyInboxUIContainer").fadeToggle("fast", function(){});
+                            jQuery(window).trigger('resize');
+						});		
+                    }else{
+                        alert( "initialise() failed: " + JSON.stringify(result) );
+                    }
+                }
+            });
+        });
+
+    </script>
+</body>
+</html>

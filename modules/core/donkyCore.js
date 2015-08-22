@@ -28,6 +28,18 @@ var DonkyCore = (function() {
 
     // private object to store the service instances
     var registeredServices = {};
+    
+    /**
+     * Initialisation status - use this to ensure initialise() isn't called twice
+     */
+    var initStatuses = {
+        uninitialised: 0,
+        initialising: 1,
+        initialised: 2,
+        failed: 3
+    };
+    
+    var initStatus = initStatuses.uninitialised;
 
 /**
  * Creates DonkyCore object.
@@ -71,6 +83,7 @@ var DonkyCore = (function() {
             true);
 
             _instance.subscribeToLocalEvent("DonkyInitialised", function(event) {
+                initStatus = initStatuses.initialised;
                 _instance._updateClientInfoIfChanged();
             });
 
@@ -719,10 +732,16 @@ var DonkyCore = (function() {
                                 if(userTaken.length === 1){
                                     console.log("UserIdAlreadyTaken");                                     
                                     _instance.donkyAccount._register(settings, function(result){
+                                        if (result.succeeded) {
+                                            _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                                        }else{
+                                            initStatus = initStatuses.failed;
+                                        }                                        
                                         settings.resultHandler(result);
                                     });
                                 }
                             }else{
+                                initStatus = initStatuses.failed;
                                 settings.resultHandler(result);
                             }
                         } 
@@ -766,25 +785,29 @@ var DonkyCore = (function() {
                 _instance.donkyLogging.warnLog("No ResultHandler specified");
                 throw new Error("resultHandler not specified");
             }
-
+            
+            if(initStatus === initStatuses.initialising){
+                message = "initialise() called twice";
+                _instance.donkyLogging.warnLog(message);
+                return(settings.resultHandler({succeeded : false, response: message}));                
+            }
+                      
             var browserInfo = _instance.donkyAccount._getBrowserInfo();
             
             if(browserInfo.name === "MSIE" && browserInfo.version < 10){
                 message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
                 _instance.donkyLogging.warnLog(message);
                 return(settings.resultHandler({succeeded : false, response: message}));
-                // throw new Error(message);                
             }               
-
 
             // ApiKey specified ?
             if (settings.apiKey === undefined) {
                 message = "No apiKey specified";
                 _instance.donkyLogging.warnLog(message);
                 return(settings.resultHandler({succeeded : false, response: message}));
-                //throw new Error("apiKey not specified");
             }
 
+            initStatus = initStatuses.initialising;
 
             // Different API key ?
             var currentKey = _instance.donkyData.get("apiKey");
@@ -813,6 +836,8 @@ var DonkyCore = (function() {
                 _instance.donkyAccount._register(settings, function(result) {
                     if (result.succeeded) {
                         _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                    }else{
+                        initStatus = initStatuses.failed;
                     }
                     settings.resultHandler(result);            
                 });
@@ -1113,7 +1138,7 @@ var DonkyCore = (function() {
                 _instance.donkyLogging.debugLog("getService(" + type + ")");
                 return registeredServices[type];
             } else {
-                _instance.donkyLogging.warnLog("getService(" + type + ") - service not available");
+                _instance.donkyLogging.debugLog("getService(" + type + ") - service not available");
                 return null;
             }
 		}catch(e){
@@ -1312,7 +1337,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.2.0.0";
+        return "2.2.1.0";
     };
     
     /** 

@@ -53,7 +53,7 @@ var DonkyAccount = (function () {
         });
 
         return _instance;
-    };
+    }
 
     /** 
      * This function parses out the browser name and version from the userAgent string.
@@ -73,7 +73,7 @@ var DonkyAccount = (function () {
         }
         if (M[1] === 'Chrome') {
             tem = ua.match(/\bOPR\/(\d+)/);
-            if (tem != null) {
+            if (tem !== null) {
                 return {
                     name: "Opera",
                     version: tem[1]
@@ -81,14 +81,14 @@ var DonkyAccount = (function () {
             }
         }
         M = M[2] ? [M[1], M[2]] : [navigator.appName, navigator.appVersion, '-?'];
-        if ((tem = ua.match(/version\/(\d+)/i)) != null) {
+        if ((tem = ua.match(/version\/(\d+)/i)) !== null) {
             M.splice(1, 1, tem[1]);
         }
         return {
             name: M[0],
             version: M[1]
         };
-    }
+    };
 
 
     /** 
@@ -117,7 +117,7 @@ var DonkyAccount = (function () {
         } else {
             return true;
         }
-    }
+    };
 
     /** 
      * This function checks the expiry of the REST API authentication token and refreshes it if it has expired.
@@ -141,7 +141,7 @@ var DonkyAccount = (function () {
         } else {
             callback({ succeeded: false });
         }
-    }
+    };
 
     /*
      * Get a new auth token via REST api
@@ -186,7 +186,7 @@ var DonkyAccount = (function () {
                     donkyCore.donkyLogging.debugLog("Succesfully refreshed authorization token");
                     // server config returned with token
                     donkyCore.donkyData.set("configuration", result.response.configuration);
-                    delete result.response["configuration"];
+                    delete result.response.configuration;
                     // just store access dets
                     donkyCore.donkyData.set("accessDetails", result.response);
 
@@ -224,7 +224,7 @@ var DonkyAccount = (function () {
                     }
                 }
             });
-    }
+    };
 
     /**
      *  Returns the DeviceId - if it hasn't been created yet, a new one is created.
@@ -241,7 +241,7 @@ var DonkyAccount = (function () {
         }
 
         return deviceId;
-    }
+    };
 
     /** This operation will return the current status of the SDK.
      * @memberof DonkyAccount
@@ -254,7 +254,7 @@ var DonkyAccount = (function () {
             donkyCore.donkyLogging.errorLog("caught exception in isRegistered() : " + e);
             return false;
         }
-    }
+    };
 
     function extendDeviceDetails(deviceDetails) {
         var browserInfo = _instance._getBrowserInfo();
@@ -318,7 +318,7 @@ var DonkyAccount = (function () {
 
                     // server config returned with token
                     donkyCore.donkyData.set("configuration", result.response.accessDetails.configuration);
-                    delete result.response.accessDetails["configuration"];
+                    delete result.response.accessDetails.configuration;
 
                     donkyCore.donkyData.set("accessDetails", result.response.accessDetails);
 
@@ -331,8 +331,8 @@ var DonkyAccount = (function () {
                     }
 
                     // dont want these going to the client
-                    delete registrationRequest.device["id"];
-                    delete registrationRequest.device["secret"];
+                    delete registrationRequest.device.id;
+                    delete registrationRequest.device.secret;
 
                     donkyCore.donkyData.set("userDetails", currentUser);
                     donkyCore.donkyData.set("deviceDetails", registrationRequest.device);
@@ -349,7 +349,7 @@ var DonkyAccount = (function () {
                 callback(result);
             });
 
-    }
+    };
 
     /** 
      * Gets the current local registration details including any device and user specifics.
@@ -373,7 +373,7 @@ var DonkyAccount = (function () {
             donkyCore.donkyLogging.errorLog("caught exception in getRegistrationDetails() : " + e);
             return null;
         }
-    }
+    };
 
     /** 
      * Gets the current local device details (Creates a new one if not already present).
@@ -390,7 +390,7 @@ var DonkyAccount = (function () {
             var browserInfo = _instance._getBrowserInfo();
             var deviceDetails = donkyCore.donkyData.get("deviceDetails");
 
-            if (deviceDetails == null) {
+            if (deviceDetails === null) {
                 deviceDetails = {
                     operatingSystem: "Web",
                     operatingSystemVersion: navigator.userAgent,
@@ -404,7 +404,7 @@ var DonkyAccount = (function () {
             return null;
         }
 
-    }
+    };
 
     /** 
      * Gets the current local client details.
@@ -418,7 +418,7 @@ var DonkyAccount = (function () {
         }
         
         return donkyCore.donkyData.get("clientDetails");
-    }
+    };
 
 
     /**
@@ -458,7 +458,7 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in updateRegistrationDetails() : " + e);
         }
-    }
+    };
 
     /**
      * Replaces the current registration with new details.  This will remove the existing registration details and create a new registration (not update the existing one).
@@ -480,7 +480,7 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in replaceRegistration() : " + e);
         }
-    }
+    };
 
     /**
      * Allows callers to update UserDetails
@@ -523,14 +523,14 @@ var DonkyAccount = (function () {
                     donkyCore.donkyData.set("userDetails", args.user);     
 
                     // dont want these going to the client
-                    delete args.device["id"];
-                    delete args.device["secret"];
+                    delete args.device.id;
+                    delete args.device.secret;
 
                     donkyCore.donkyData.set("deviceDetails", args.device);
                 }
                 callback(result);
             });
-    }
+    };
 
     /**
      * Allows callers to update UserDetails
@@ -576,7 +576,7 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in updateUserDetails() : " + e);
         }
-    }
+    };
 
     /**
      * Allows callers to update DeviceDetails
@@ -619,8 +619,8 @@ var DonkyAccount = (function () {
                     if (result.succeeded) {            
                     
                         // dont want these going to the client
-                        delete deviceDetails["id"];
-                        delete deviceDetails["secret"];
+                        delete deviceDetails.id;
+                        delete deviceDetails.secret;
 
                         donkyCore.donkyData.set("deviceDetails", deviceDetails);
                     }
@@ -629,7 +629,7 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in updateDeviceDetails() : " + e);
         }
-    }
+    };
 
     /**
      * Allows callers to update ClientDetails
@@ -671,7 +671,7 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in _updateClient() : " + e);
         }
-    }
+    };
     /**
      * This operation will return whether the User has been suspended.
      *
@@ -681,7 +681,7 @@ var DonkyAccount = (function () {
         var isSuspended = donkyCore.donkyData.get("isSuspended");
 
         return isSuspended !== null ? isSuspended : false;
-    }
+    };
 
     /**
      *  Gets the tags for the current user.
@@ -707,7 +707,7 @@ var DonkyAccount = (function () {
             donkyCore.donkyLogging.errorLog("caught exception in getTags() : " + e);
         }
 
-    }
+    };
 
     /**
      *  Sets the selected tags for the current user.
@@ -734,7 +734,7 @@ var DonkyAccount = (function () {
             donkyCore.donkyLogging.errorLog("caught exception in putTags() : " + e);
         }
 
-    }
+    };
 
 
 

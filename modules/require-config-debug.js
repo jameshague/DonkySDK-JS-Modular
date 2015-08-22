@@ -17,6 +17,7 @@ require.config({
 		"donkyRichLogic": "modules/messaging/rich/logic/donkyRichLogic",
         "donkyRichPopupUI": "modules/messaging/rich/ui/donkyRichPopupUI",
 		"donkyInboxContainerUI":  "modules/messaging/common/ui/donkyInboxContainerUI",
+		"donkyInboxEmbedUI":  "modules/messaging/common/ui/donkyInboxEmbedUI",
 		"donkyRichInboxUI":  "modules/messaging/rich/ui/donkyRichInboxUI",
 		"donkyChatInboxUI":  "modules/messaging/chat/ui/donkyChatInboxUI"		
 	}

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
+    <title>Bootstrap 101 Template</title>
+
+    <!-- Bootstrap -->
+    <!-- Latest compiled and minified CSS -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+
+<!-- Optional theme -->
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.min.css">
+
+<style>
+  #overlay-1{display:none;}
+  
+	.overlay-bg
+	{
+		background: rgba(0,0,0,0.8);
+		position: fixed;
+		top: 0;
+		bottom: 0;
+		right: 0;
+		left: 0;
+		z-index: 100;
+	}
+	.overlay-bg h3
+	{
+		color: white;
+		text-align:center;
+		position: relative;
+		left: 28px;
+	}
+	.overlay-bg span
+	{
+		color: white;
+		padding: 7px;
+		background: rgba(244,244,244,0.5);
+		margin: 10px;
+		border-radius: 4px;
+    z-index: 101;
+    cursor:pointer;
+	}
+	.inbox-container
+	{
+		background-color: transparent;
+		position: fixed;
+		top: 10%;
+		bottom: 10%;
+		right: 10%;
+		left: 10%;
+		z-index: 100;
+		width: 60%;
+		margin: 0 auto;
+		/*border: 1px solid #ccc;*/
+	}
+	.badge-inbox
+	{
+		position: relative;
+		float:right;
+		z-index: 50;
+		right: -60px;
+		top: -7px;;
+		background-color: red;
+	}
+	.inbox-button
+	{
+		font-size: 24px;
+		padding: 6px 12px;
+	}
+</style>
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
+    <!--[if lt IE 9]>
+      <script src="https://oss.maxcdn.com/html5shiv/3.7.2/html5shiv.min.js"></script>
+      <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+  	<!-- navbar -->
+    <nav class="navbar navbar-inverse">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Bootstrap theme</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+            <li class="dropdown">
+              <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Dropdown <span class="caret"></span></a>
+              <ul class="dropdown-menu">
+                <li><a href="#">Action</a></li>
+                <li><a href="#">Another action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li role="separator" class="divider"></li>
+                <li class="dropdown-header">Nav header</li>
+                <li><a href="#">Separated link</a></li>
+                <li><a href="#">One more separated link</a></li>
+              </ul>
+            </li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container theme-showcase" role="main">
+
+      <!-- Main jumbotron for a primary marketing message or call to action -->
+      <div class="jumbotron">
+      	
+      	<button id="openInbox" type="button" class="btn btn-lg btn-default pull-right inbox-button"><span class="glyphicon glyphicon-envelope"></span></button>
+        <span class="badge badge-inbox"></span>
+        <h1>Hello, world!</h1>
+        <p>This is an example for how the Donky Container can be embedded into any overlay onto a page.</p>
+        <p id="userInfoParagraph"></p>
+        <p><a class="btn btn-primary btn-lg" href="http://docs.mobiledonky.com/docs/inbox-integration-options" role="button">Learn more &raquo;</a></p>
+
+      </div>
+
+
+<div class="container">
+      <!-- Example row of columns -->
+      <div class="row">
+        <div class="col-md-4">
+          <h2>Awesome content</h2>
+          <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+        </div>
+        <div class="col-md-4">
+          <h2>Interesting content</h2>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+       </div>
+        <div class="col-md-4">
+          <h2>Some more content</h2>
+          <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+        </div>
+      </div>
+
+      <hr>
+
+      <footer>
+        <p>&copy; Company 2014</p>
+      </footer>
+
+
+
+
+
+    </div> <!-- /container -->
+    <div id="overlay-1" class="overlay-bg">
+      <span id="closeInbox" class="glyphicon glyphicon-remove pull-right"></span>
+      <h3>Inbox</h3>
+      
+      <div id="donky-inbox" class="inbox-container">        
+      </div>  
+    </div>
+	
+    <!-- jQuery (necessary for Bootstrap's JavaScript plugins) -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>
+            
+    <!-- Include all compiled plugins (below), or include individual files as needed -->
+    <!-- Latest compiled and minified JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest/dependencies/bootstrap-growl.min.js"></script>    
+    
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config-debug.js"></script>
+    
+    
+    <script>
+      jQuery(function() {
+        
+        var $growl = null;
+        
+        
+        /**
+         * Function to show the inbox. Inbox is an iframe embedded in an overlay, we are fading in the overlay.
+         * Note the resize trigger. This is to cater for the first time the inbox is shown.
+         */
+        function showInbox(){
+            jQuery("#overlay-1").fadeIn("fast", function(){});
+            // need to trigger a resize as the view was initialy built when it was hidden.
+            // can triggger in the callback but there is a delay.
+            jQuery(window).trigger('resize');          
+        }
+        
+        /**
+         * Click handler to open the inbox (user clicked the envelope button)
+         */
+        jQuery("#openInbox").click(function(){
+          showInbox();
+        });
+        
+        /**
+         * Click handler to chose the inbox (user has clicked the X button intghe top right of the overlay)
+         */
+        jQuery("#closeInbox").click(function(){
+          jQuery("#overlay-1").fadeOut("fast", function(){});
+        });
+        
+        /**
+         * User has clicked on one of the grown popups that was created when a new rich message was received.
+         * If one message wss received, the messageId was attached to the view button via a data attribute - we will open the message
+         * If more than one message was received, ther eis no messageId - we will open the inbox
+         */
+        jQuery('body').on("click", ".growlActionButton", function(){
+           // Cloese the popup
+           $growl.close();
+           // get the message id
+           var messageId = jQuery(this).data("message-id");
+
+            // if the inbox is not visible, show it            
+            if(!jQuery("#overlay-1").is(":visible")){
+              showInbox();
+            }
+                        
+            if(messageId !== undefined){
+              // one new message received - trigger an event that the inbox understands to open on that message
+              jQuery(document).trigger('ViewRichMessage', [messageId]);
+            }else{
+              // more than one new message received - trigger an event that the inbox understands to open the inbox
+              jQuery(document).trigger('ViewRichInbox');
+            }
+         });
+        
+        
+        /**
+         * Function to display a growl message when a new message or messages are received
+         * @param {Object} event - the donky local event object associated with the NewRichMessagesReceived event
+         */
+        function showGrowl(event){
+          // event.data points to an array of new unread messages
+          var newMessages = event.data; 
+          
+          // Just 1 message ...
+          if(newMessages.length === 1){
+            // use message description in growl
+            // growl with link to message - note the messageId being set as a data attribute to the button                
+            $growl = jQuery.growl({
+                icon: 'glyphicon glyphicon-comment',
+                title: '<strong>New Message: ' + newMessages[0].description + '</strong><button class="growlActionButton" data-message-id="' + newMessages[0].messageId + '">View</button>'
+            },{
+                type: 'success',
+                timer: 60000
+            });
+            
+          // More than 1 message ...
+          }else{
+            // message description: You have x new message(s)
+            // growl with link to inbox - no messageId
+            jQuery.growl({
+                icon: 'glyphicon glyphicon-comment',
+                title: '<strong>' + newMessages.length + ' new Message(s)</strong><button class="growlActionButton">View</button>'
+            },{
+                type: 'success',
+                timer: 60000
+            });
+          }
+        }
+        
+        /**
+         * Function to set the badge count on the main screen. This is called on startup and when the following events occurr: RichMessageRead, RichMessageDeleted, NewRichMessagesReceived
+         * @param {Interface} donkyRichLogic - the donkyRichLogic interface. This is created by require(...)
+         * @param {Object} event - the event object associated wit hte donky local event. 
+         */
+         function updateBadgeCount(donkyRichLogic, event){
+          
+            // this object contains 2 properties: unreadRichMessageCount and richMessageCount 
+            var counts = donkyRichLogic.getMessageCount();
+
+            // update the badge span ("" hides it)
+            jQuery(".badge-inbox").text(counts.unreadRichMessageCount > 0 ? counts.unreadRichMessageCount : "");          
+        }
+        
+        /**
+         * Use require.js to pull in the required donky modules:
+         */
+        require(['donkyRichLogic', 'donkyRichInboxUI', 'donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytics'],
+            function(donkyRichLogic, donkyRichInboxUI, donkyInboxEmbedUI, donkyCore, donkyCoreAnalytics) {
+
+            // The following 3 event handlers will let us know whether the unread badge count needs to be updated                       
+            donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event) {
+                updateBadgeCount(donkyRichLogic, event);
+                // if the inbox is visible, don't bother with the growl messages - you can always show them but will need to ensure the z-index of
+                // the growl messages is higher than the inbox if you want to interact with them.
+                if(!jQuery("#overlay-1").is(":visible")){
+                  showGrowl(event);  
+                }                
+            });             
+                        
+            donkyCore.subscribeToLocalEvent("RichMessageRead", function(event) {
+                updateBadgeCount(donkyRichLogic, event);
+            });              
+                        
+            donkyCore.subscribeToLocalEvent("RichMessageDeleted", function(event) {
+                updateBadgeCount(donkyRichLogic, event);
+            });               
+            
+            // Initialise Donky
+            donkyCore.initialise({
+                
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+                
+                    if(result.succeeded) {
+                        var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                        // insere the userid into the jumbotron so you can target that user with messages for testing purposes
+                        jQuery("#userInfoParagraph").text("Send push message from campaign Builder to \""+registrationDetails.userDetails.id+"\"");
+                        
+                        // set the badge count after we have initialized
+                        updateBadgeCount(donkyRichLogic);
+   
+                        // Initialise the donkyRichInboxUI module
+                        donkyRichInboxUI.initialise(function(){
+                            donkyCore.donkyLogging.infoLog("donkyRichInboxUI() initialized ;-)");
+                        });
+                         
+                        var options = {         
+                          /**
+                           * This is the div that we will insert the inbox into
+                           */
+                          iFrameContainer: "donky-inbox",
+                          /**
+                           * We only have a single view and we don't require an index page to be rendered
+                           */                 
+                          showIndexPage: false,
+                          /**
+                           * We have overriden a few css rules to make the inbox look transparent and spaced out the list view a bit.
+                           * Remove this property and it is vanilla ...
+                           */ 
+                          inboxCssOverrideUrls: ["https://cdn.dnky.co/sdk/latest-modular/samples/css/overlay.css"] 
+                       };
+                        
+                        // Initialise the donkyInboxContainerUI module - note that we pass in the donkyRichInboxUI module in an array.
+                        // The job of the container is to host various views - we are just supplying the rich inbox view. 
+                        // in this demo, we are passing in some config in the second parameter. Seeing that there is only a single view, 
+                        // an index page is unnecessary so we are telling the container not to display the index page
+                        donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);						                        
+                    }else{
+                        alert( "initialise() failed: " + JSON.stringify(result) );
+                    }
+                    
+                }
+            });
+        });
+      });      
+    </script>
+    
+  </body>
+</html>

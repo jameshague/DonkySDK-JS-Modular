@@ -169,6 +169,13 @@ This allows an integrator to potentially write their own UI from scratch if they
 
 # Samples
 
+Please note: donkyCore is only to be initialised ONCE. If you require a mixture of the below samples, 
+you will need to merge the functionality together. If you are not familiar with [Require.js](http://requirejs.org/) 
+then I suggest you head over to their site. Essentially you specify all the donky interfaces you want to use as an 
+array of strings and they get passed to you asynchronously in the specified callback function. You just need to map the callback function arguments.
+Internally, all associated dependencies with the interfaces you pick are resolved for you. 
+
+
 | Sample       		| Description|
 |:------------- 		|----------------:|
 | [Initialise anonymously](#initialise-anonymously)  | Initialize anonymously 	|
@@ -325,15 +332,19 @@ JS Specific API docs for [subscribeToContentNotifications()](http://cdn.dnky.co/
 ## Automation
 A third party trigger is a mechanism to trigger a compaign when an application specific event has occured.
 For the porpose of this sample I will simply execute after initialisation. In the real world some application 
-state or event will be used to decide when to execute.  
+state or event will be used to decide when to execute. Also note that I have included donkyPushUI in this code snippet.
+Typically the resulting action of the third party trigger will be to send a message to the user. 
+This sample assumes it will be a push message.
 
 ```javascript
 // We ask Require.js for the donkyAutomation interface along with donkyCore   
-require(['donkyCore', 'donkyAutomation'],function(donkyCore, donkyAutomation) {
+require(['donkyCore', 'donkyAutomation', 'donkyPushUI'],function(donkyCore, donkyAutomation, donkyPushUI) {
     donkyCore.initialise({
         apiKey: ">>>Enter API Key here<<<",
         resultHandler: function(result) {
             if(result.succeeded) {
+                                                
+                donkyPushUI.initialise();      
                 
                 /* We can pass in some custom data with the trigger.
                  * This can be used as merge fields for the resulting message
@@ -475,6 +486,53 @@ require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore'
 });
 ```
 Documentation for donkyAudio here[here](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyAudio.html)
+
+## Embedding Inbox into an iframe on your page
+
+If you want to embed rich inbox into a div within your site rather than have the dock to the right, slide to open/close functionality you can do this with the donkyInboxEmbedUI plugin.
+The plugin expects an iframe with an id of "donkyInboxUIContainer" (this can be overriden). You can wrap it in a div to allow better positioning.
+Here is an html snippet with some style to place the iframe in an overlay:  
+```html
+<style>
+    #inbox-container{
+        position: fixed;
+        top: 10%;
+        bottom: 10%;
+        right: 10%;
+        left: 10%;
+        z-index: 100;
+    }
+</style>
+
+<div id="inbox-container">
+</div>      
+```
+
+The following script will initialise everything for you (anonymous registration)
+
+```javascript
+require(['donkyRichInboxUI','donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytics'],
+    function(donkyRichInboxUI, donkyInboxEmbedUI, donkyCore, donkyCoreAnalytics) {
+    // Initialise Donky (anonymously)
+    donkyCore.initialise({
+        apiKey: ">>>YOUR API KEY<<<",
+        resultHandler: function(result) {
+            if(result.succeeded) {
+                // Initialise the donkyRichInboxUI module
+                donkyRichInboxUI.initialise();                
+                var options = {
+                    // This is the div that we will insert the inbox into
+                    iFrameContainer: "donky-inbox",                    
+                    // we only have 1 view so don't show the index page   
+                    showIndexPage: false 
+                };                    
+                // Initialise the donkyInboxEmbedUI module
+                donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);						                        
+            }
+        }
+    });
+});
+```
 
 # Grunt
 To build the release yourself and host yourself follow these steps:

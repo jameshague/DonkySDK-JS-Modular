@@ -35,7 +35,9 @@
 				"https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css", 
 				donkyCore.installDir + "css/awesome-bootstrap-checkbox.css", 
 				donkyCore.installDir + "css/DonkyInboxUI.css"
-			],			
+			],		
+			// override css files 
+			inboxCssOverrideUrls: null,				
 			// Inline css for inbox
 			inlineInboxCss: null,
 			// css files for handle			
@@ -43,6 +45,8 @@
 				"https://maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css",
 				donkyCore.installDir + "css/DonkyContainerHandle.css"
 			],
+			// override css files 
+			handleCssOverrideUrls: null,				
 			// Inline css for container handle
 			inlineHandleCss: null,			
 			// The id of the inbox container iframe
@@ -240,10 +244,20 @@
 		}
 		
 		/**
-		 * Resize the height of the iframe when the dimensions change - on iOS devics, specifying 100% width doesn't have the desired effect 
+		 * Resize the height/width of the iframe when the dimensions change: 
+		 * on iOS devics, specifying 100% width doesn't have the desired effect 
 		 */
 		function onDimensionsChanged(){			
 			 defaults.$iFrameId.css("height", window.innerHeight + "px");
+			 
+			 if( isMobile ){				 
+				defaults.notificationIframeMaxWidth = window.innerWidth;
+								
+				defaults.$iFrameId.contents().find("body").css("width", defaults.notificationIframeMaxWidth + "px");
+								
+				defaults.$iFrameId.css("width", (isOpen ? defaults.notificationIframeMaxWidth : 0) + "px");				
+				defaults.$handleIFrameId.css("right", (isOpen ? defaults.notificationIframeMaxWidth : 0) + "px");				
+			 }
 		}
 		
 		// donkyInboxContainerUI
@@ -257,7 +271,7 @@
 
             var module = {  
                 name: "DonkyInboxContainerUI", 
-                version: "2.0.0.0" 
+                version: "2.0.1.0" 
             };
 
             donkyCore.registerModule(module);	
@@ -297,12 +311,13 @@
 					donkyCore._extend(defaults, settings);	
 				}
 													
-				jQuery(window).on("resize orientationchange",function(){
+				jQuery(window).on("resize orientationchange", function(){
 				  	onDimensionsChanged();
 				});									
 								
 		        // Decide on mode based on screen width - for a "mobile", we want the inbox to open to full screen
-		        if (window.innerWidth <= defaults.desktopCutoffWidth ) {
+				
+				if (Math.min(window.innerWidth, window.innerHeight) <= defaults.desktopCutoffWidth ) {
 		            isMobile = true;
 					defaults.notificationIframeMaxWidth = window.innerWidth; 
 		        }
@@ -345,6 +360,7 @@
 					// Apply the iframe css from the defaults
 					defaults.$iFrameId.css( defaults.iFrameCss );
 				}
+				
 				if(defaults.handleIFrameId !== null){
 					// create the iframe for the inbox handle
 					jQuery("body").append("<iframe id='" + defaults.handleIFrameId + "' frameborder='0' scrolling='no' ></iframe>");
@@ -358,6 +374,15 @@
 								
 				// Load mustache templates for the views																		
 				loadTemplates(function(){
+																
+					// concatenate inboxCssUrls and inboxCssOverrideUrls if inboxCssOverrideUrls is specified					
+					if(defaults.inboxCssOverrideUrls !== null ){						
+						if(donkyCore._isArray(defaults.inboxCssOverrideUrls)){
+							defaults.inboxCssUrls = defaults.inboxCssUrls.concat(defaults.inboxCssOverrideUrls);
+						}else if(typeof defaults.inboxCssOverrideUrls === "string"){
+							defaults.inboxCssUrls.push(defaults.inboxCssOverrideUrls);
+						}						
+					}							
 								
 					// Render doc for container							
 					donkyUICommon.renderIframeSrcDoc(defaults.$iFrameId, getIframeSrc(defaults.inboxCssUrls, defaults.inlineInboxCss), function(){
@@ -366,6 +391,16 @@
 						defaults.$iFrameId.contents().find("body").css("width", defaults.notificationIframeMaxWidth + "px");
 
 						if(defaults.handleIFrameId !== null){
+														
+							// concatenate handleCssUrls and handleCssOverrideUrls if handleCssOverrideUrls is specified					
+							if(defaults.handleCssOverrideUrls !== null ){						
+								if(donkyCore._isArray(defaults.handleCssOverrideUrls)){
+									defaults.handleCssUrls = defaults.handleCssUrls.concat(defaults.handleCssOverrideUrls);
+								}else if(typeof defaults.handleCssOverrideUrls === "string"){
+									defaults.handleCssUrls.push(defaults.handleCssOverrideUrls);
+								}						
+							}							
+							
 							// render doc for the handle 
 							donkyUICommon.renderIframeSrcDoc(defaults.$handleIFrameId, getIframeSrc(defaults.handleCssUrls, defaults.inlineHandleCss), function(){								
 								renderHandle();
@@ -441,9 +476,13 @@
 					var viewState = donkyCore.donkyData.get("InboxContainerView");
 					
 					if(viewState !== null && viewState.index  !== -1){
-						// We need to render this view
-						views[viewState.index].renderView();
-						donkyUICommon.setInboxViewState({view: donkyUICommon.inboxViews.homePage});										
+						// We need to render this view						
+						if(viewState.index <= views.length ){
+							views[viewState.index].renderView();	
+						}else{
+							// this won't happen in real world.
+							views[0].renderView();
+						}																
 					}else{
 						// We need to render this index page
 						renderHomePage();					
@@ -464,7 +503,7 @@
             return factory(donkyCore, donkyRichLogic, donkyUICommon, Mustache); 
         });
 	} else {
-		window.donkyPushUI = factory(window.donkyCore, window.donkyRichLogic, window.donkyUICommon, window.Mustache);
+		window.donkyInboxContainerUI = factory(window.donkyCore, window.donkyRichLogic, window.donkyUICommon, window.Mustache);
 	}
 
 }());

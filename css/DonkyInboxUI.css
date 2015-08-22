@@ -337,10 +337,11 @@
 
 .donkyInboxUI .panel-heading .fa{font-size:20px;}
 
+.donkyInboxUI .panel-heading .btn{padding: 6px 6px;}
+
 /* For narrow mobile devices nee to drop the size as it wont fit */
 @media (max-width: 320px) {
-	.donkyInboxUI .panel-heading .fa{font-size:15px;}
-	.donkyInboxUI .panel-heading .btn{padding: 6px 10px;}
+	.donkyInboxUI .panel-heading .fa{font-size:15px;}	
 }
 
 .donkyInboxUI .panel-title{

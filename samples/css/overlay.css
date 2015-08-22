@@ -1,0 +1,34 @@
+body, .panel, .donkyInboxUI .panel-heading{background-color: transparent !important;}
+
+.panel-title{display:none;}
+
+.donkyInboxUI .panel-body .search-wrapper{
+    padding: 10px 0px;
+}
+
+.richMessage{margin-bottom:20px;}
+
+.donkyInboxUI .panel-heading{
+	padding-bottom:0;
+	height:auto;
+}
+
+.panel-heading .row div[class^="col-"]{
+	margin:0;padding:0;
+}
+
+.donkyInboxUI .panel-body .search-wrapper .glyphicon-search{
+	left: 10px;
+}
+
+.donkyInboxUI .panel-body .search-wrapper .glyphicon-remove{
+	right: 10px;
+}
+
+
+.sentTime{
+	float:none;
+	position: absolute;
+    right: 0;
+    bottom: 0;	
+}
