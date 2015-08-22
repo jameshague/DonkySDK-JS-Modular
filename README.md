@@ -186,7 +186,11 @@ Internally, all associated dependencies with the interfaces you pick are resolve
 | [Simple push](#simple-push)  | Receive and display a simple push message 	|
 | [Rich popup](#rich-popup)  | Receive a rich message and display it in a popup 	|
 | [Rich inbox](#rich-inbox)  | Receive a rich message and display it in an inbox 	|
-| [Rich inbox, Simple push with audio](##rich-inbox--simple-push)  | Receive a rich message and display it in an inbox and play a sound 	|
+| [Rich inbox, Simple push with audio](#rich-inbox-simple-push-and-audio)  | Receive a rich message and display it in an inbox and play a sound 	|
+| [Embedding inbox into an iframe](#embedding-inbox-into-an-iframe-on-your-page)  | Embed inbox into an iframe in your site  	|
+
+
+
 
 ## Initialise anonymously
 This example initialises Donky anonymously. 
@@ -522,7 +526,7 @@ require(['donkyRichInboxUI','donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytic
                 donkyRichInboxUI.initialise();                
                 var options = {
                     // This is the div that we will insert the inbox into
-                    iFrameContainer: "donky-inbox",                    
+                    iFrameContainer: "inbox-container",                    
                     // we only have 1 view so don't show the index page   
                     showIndexPage: false 
                 };                    
