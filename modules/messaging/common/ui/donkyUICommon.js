@@ -23,7 +23,24 @@
             contacts: 7
         };
 
-        var srcDocSupported = !!("srcdoc" in document.createElement("iframe"));
+        /**
+         * Internal function to determine whether browser is iOS
+         */
+        function isiOS(){
+            return navigator.userAgent.match(/iPad|iPhone|iPod/g) ? true : false;
+        }
+        
+        /**
+         * Internal function to determine whether browser is Firefox
+         */
+        function isFirefox(){
+            return navigator.userAgent.toLowerCase().indexOf('firefox') > -1;
+        }
+
+        /**
+         * Firefox creates a history entry which ruins the UI when you hit the back button so don't use srcdoc on ANY firefox browser ;-(
+         */
+        var srcDocSupported = !isFirefox() ? !!("srcdoc" in document.createElement("iframe")) : false;
 
         // donkyUICommon --------
         //====================
@@ -113,6 +130,12 @@
              */
             renderIframeSrcDoc: function($id, html, callback) {
 
+                if (donkyCore._isFunction(callback)) {
+                    $id.load(function() {
+                        callback(jQuery(this));
+                    });
+                }
+
                 if (srcDocSupported) {
                     $id.attr("srcdoc", html);
                 } else {
@@ -121,15 +144,6 @@
                     iframeDocument.write(html);
                     iframeDocument.close();
                 }
-
-                if (donkyCore._isFunction(callback)) {
-                    $id.load(function() {
-                        callback(jQuery(this));
-                    });
-                }
-            },
-            isiOS: function() {
-                return navigator.userAgent.match(/iPad|iPhone|iPod/g) ? true : false;
             }
         };
 

@@ -156,7 +156,7 @@
 
             var module = {  
                 name: "DonkyInboxEmbedUI", 
-                version: "2.0.0.0" 
+                version: "2.0.0.1" 
             };
 
             donkyCore.registerModule(module);	
@@ -235,7 +235,11 @@
 						defaults.$iFrame.contents().find("body").css("width", defaults.$iFrame.width() + "px");
 						
 						jQuery(window).on("resize orientationchange",function(){
-							defaults.$iFrame.contents().find("body").css("width", defaults.$iFrame.width() + "px");
+							var width = defaults.$iFrame.width();
+							defaults.$iFrame.contents().find("body").css("width", width + "px");
+							// safari doesn't respect the width:inherit rule on the top panel when the parent width dynamically changes
+							// HACK: just set it 
+							defaults.$iFrame.contents().find(".panel.donkyInboxUI").css("width", width + "px");
 						});									
 																											
 						donkyInboxEmbedUI.renderView();
@@ -278,7 +282,7 @@
 					
 					if(viewState !== null && viewState.index  !== -1){
 						// We need to render this view						
-						if(viewState.index <= views.length ){
+						if(viewState.index < views.length ){
 							views[viewState.index].renderView();	
 						}else{
 							// this won't happen in real world.

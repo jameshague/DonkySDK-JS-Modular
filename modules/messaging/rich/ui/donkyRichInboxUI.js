@@ -552,6 +552,13 @@
 			var viewState = donkyUICommon.getInboxViewState();	
 			var panelHeadingHeight, filterHeight;							
 									
+			// safari doesn't respect the width:inherit rule on the top panel when the parent width dynamically changes
+			// HACK: just set it 
+			if(defaults.iFrameId !== null){
+				var bodyWidth = getElements("body").width();			
+				getElements(".panel.donkyInboxUI").css("width", bodyWidth + "px");				
+			}																		
+												
 			switch( viewState.view )
 			{
 				case donkyUICommon.inboxViews.richInbox:					
@@ -671,7 +678,7 @@
 			
             var module = {  
                 name: "DonkyRichInboxUI", 
-                version: "2.0.1.0" 
+                version: "2.0.1.1" 
             };
 
             donkyCore.registerModule(module);			
