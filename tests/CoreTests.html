@@ -44,7 +44,7 @@
         lastName: "Smith",
         emailAddress: "john.smith@hotmail.co.uk",
         countryCode: "GBR",
-        phoneNumber: "07979497000",
+        mobileNumber: "07979497000",
     };
     
     // same person, just updated some fields
@@ -55,7 +55,7 @@
         lastName: "Smith",
         emailAddress: "john.smith@gmail.com",
         countryCode: "GBR",
-        phoneNumber: "07979497300",
+        mobileNumber: "07979497300",
     };
 
     // a totally different person
@@ -66,7 +66,7 @@
         lastName: "Bloggs",
         emailAddress: "joe.bloggs@gmail.com",
         countryCode: "GBR",
-        phoneNumber: "07979497200",
+        mobileNumber: "07979497200",
     };
 
     var defaultDeviceDetails = {
@@ -1612,7 +1612,7 @@
                 assert.ok(result.succeeded, "result.succeeded should be set to true");
                 var updatedDets = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
 
-                assert.equal(updatedDets.phoneNumber, defaultUpdatedUserDetails.phoneNumber, "Phone number updated");
+                assert.equal(updatedDets.mobileNumber, defaultUpdatedUserDetails.mobileNumber, "Phone number updated");
                 // leave in a good state for next test
                 donkyCore.donkyNetwork._stopSignalR(function(){
                     done();  
@@ -1641,7 +1641,7 @@
                 assert.equal( updatedDets.userDetails.lastName, defaultUserDetails.lastName, "lastName same" );
                 assert.equal( updatedDets.userDetails.emailAddress, defaultUserDetails.emailAddress, "emailAddress same" );
                 assert.equal( updatedDets.userDetails.countryCode, defaultUserDetails.countryCode, "countryCode same" );
-                assert.equal( updatedDets.userDetails.phoneNumber, defaultUserDetails.phoneNumber, "phoneNumber same" );
+                assert.equal( updatedDets.userDetails.mobileNumber, defaultUserDetails.mobileNumber, "mobileNumber same" );
 
                 // leave in a good state for next test
                 donkyCore.donkyNetwork._stopSignalR(function(){
@@ -1675,7 +1675,7 @@
             lastName: "Smith",
             emailAddress: "john.smith_hotmail.co.uk",/*Email addr is bad ...*/ 
             countryCode: "GBR",
-            phoneNumber: "07979497000"
+            mobileNumber: "07979497000"
         };
 
         initializeDonky(true, userDetails, undefined, function(donkyCore, result) {
@@ -1709,7 +1709,7 @@
                 assert.equal( updatedDets.userDetails.lastName, replacementUserDetails.lastName, "lastName updated" );
                 assert.equal( updatedDets.userDetails.emailAddress, replacementUserDetails.emailAddress, "emailAddress updated" );
                 assert.equal( updatedDets.userDetails.countryCode, replacementUserDetails.countryCode, "countryCode updated" );
-                assert.equal( updatedDets.userDetails.phoneNumber, replacementUserDetails.phoneNumber, "phoneNumber updated" );
+                assert.equal( updatedDets.userDetails.mobileNumber, replacementUserDetails.mobileNumber, "mobileNumber updated" );
                     
                 assert.equal( updatedDets.deviceDetails.type, replacementDeviceDetails.type, "type updated" );
                 assert.equal( updatedDets.deviceDetails.name, replacementDeviceDetails.name, "name updated" );

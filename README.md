@@ -228,7 +228,7 @@ require(['donkyCore'],function(donkyCore) {
             lastName: "Smith",
             emailAddress: "john.smith@hotmail.co.uk",
             countryCode: "GBR",
-            phoneNumber: "07979497000",            
+            mobileNumber: "07979497000",            
         },
         resultHandler: function(result) {
             if(result.succeeded) {
@@ -319,7 +319,7 @@ require(['donkyCore'],function(donkyCore) {
             lastName: "Smith",
             emailAddress: "john.smith@hotmail.co.uk",
             countryCode: "GBR",
-            phoneNumber: "07979497000",            
+            mobileNumber: "07979497000",            
         },
         resultHandler: function(result) {
             if(result.succeeded) {

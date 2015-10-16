@@ -676,7 +676,7 @@ var DonkyCore = (function() {
                  userDetails.lastName != registrationDetails.userDetails.lastName ||
                  userDetails.emailAddress != registrationDetails.userDetails.emailAddress ||
                  userDetails.countryCode != registrationDetails.userDetails.countryCode ||
-                 userDetails.phoneNumber != registrationDetails.userDetails.phoneNumber || 
+                 userDetails.mobileNumber != registrationDetails.userDetails.mobileNumber || 
                  !_instance._compareDictionaries(userDetails.additionalProperties,registrationDetails.userDetails.additionalProperties));
     };
 
@@ -1337,7 +1337,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.2.1.0";
+        return "2.2.1.2";
     };
     
     /** 
