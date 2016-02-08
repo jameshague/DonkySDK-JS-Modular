@@ -36,10 +36,18 @@ var DonkyCore = (function() {
         uninitialised: 0,
         initialising: 1,
         initialised: 2,
-        failed: 3
+        uninitialising: 3,
+        failed: 4,
     };
     
     var initStatus = initStatuses.uninitialised;
+
+    var defaults = {
+        newDeviceWarning: true,
+        newDeviceTitle : "New Device ?",
+        newDeviceBody : "A new device has been registered against your account; if you did not register this device please let us know immediately",
+    };
+
 
 /**
  * Creates DonkyCore object.
@@ -48,7 +56,7 @@ var DonkyCore = (function() {
     function DonkyCore() {
 
         // If it's being called again, return the singleton instance
-        if (typeof _instance != "undefined") return _instance;
+        if (typeof _instance !== "undefined") return _instance;
 
         // Keep a closured reference to the instance
         _instance = this;
@@ -78,6 +86,15 @@ var DonkyCore = (function() {
                 handler: function(notification) {
                     _instance.donkyLogging.debugLog("NewDeviceAddedToUser : " + JSON.stringify(notification));
                     _instance.publishLocalEvent({ type : "NewDeviceAddedToUser", data: notification });
+                    
+                    if(defaults.newDeviceWarning){
+                        
+                        var donkyPushLogic = _instance.getService("donkyPushLogic");
+                        
+                        if(donkyPushLogic !== null){
+                            donkyPushLogic.queueCustomPopup("newDeviceWarning", defaults.newDeviceTitle, defaults.newDeviceBody);
+                        }                        
+                    }                    
                 }
             }],
             true);
@@ -243,7 +260,7 @@ var DonkyCore = (function() {
             acknowledgementDetail: {
                 serverNotificationId: notification.id,
                 result: result,
-                sentTime: new Date().toISOString(),
+                sentTime: notification.createdOn,
                 type: notification.type,
                 // only needed for custom types, if set to undefined, stringification will remove
                 customNotificationType: notification.type === "Custom" ? notification.data.customType : undefined
@@ -730,7 +747,7 @@ var DonkyCore = (function() {
                                 });
                                 
                                 if(userTaken.length === 1){
-                                    console.log("UserIdAlreadyTaken");                                     
+                                    _instance.donkyLogging.warnLog("UserIdAlreadyTaken");
                                     _instance.donkyAccount._register(settings, function(result){
                                         if (result.succeeded) {
                                             _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
@@ -760,7 +777,7 @@ var DonkyCore = (function() {
         }    
     };
 
-    /** 
+   /** 
     * This operation should ensure the SDK is active, and that the device is registered on the network with the correct API key and able to send/receive data.
     * This should also ensure that the registered module details are passed to the network if changed.
     * @memberof DonkyCore
@@ -772,97 +789,167 @@ var DonkyCore = (function() {
     * @param {Callback} settings.resultHandler - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
     */
     DonkyCore.prototype.initialise = function(settings) {
-        // try {
-            var message;
-            
-            // Settings specified ?
-            if (settings === undefined || settings === null) {                
-                throw new Error("no options specified");
-            }
-
-            // ResultHandler specified ?
-            if (!_instance._isFunction(settings.resultHandler)) {
-                _instance.donkyLogging.warnLog("No ResultHandler specified");
-                throw new Error("resultHandler not specified");
-            }
-            
-            if(initStatus === initStatuses.initialising){
-                message = "initialise() called twice";
-                _instance.donkyLogging.warnLog(message);
-                return(settings.resultHandler({succeeded : false, response: message}));                
-            }
-                      
-            var browserInfo = _instance.donkyAccount._getBrowserInfo();
-            
-            if(browserInfo.name === "MSIE" && browserInfo.version < 10){
-                message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
-                _instance.donkyLogging.warnLog(message);
-                return(settings.resultHandler({succeeded : false, response: message}));
-            }               
-
-            // ApiKey specified ?
-            if (settings.apiKey === undefined) {
-                message = "No apiKey specified";
-                _instance.donkyLogging.warnLog(message);
-                return(settings.resultHandler({succeeded : false, response: message}));
-            }
-
-            initStatus = initStatuses.initialising;
-
-            // Different API key ?
-            var currentKey = _instance.donkyData.get("apiKey");
-
-            if (currentKey !== null && currentKey !== settings.apiKey) {
-                // remove this and isRegistered() will return false;
-                _instance.donkyData.remove("networkId");
-            }
-
-            // internal for testing
-            if (settings.useSignalR === false) {
-                _instance.donkyNetwork._useSignalR(false);
-            } else {
-                _instance.donkyNetwork._useSignalR(true);
-            }
-
-            _instance.donkyData.set("apiKey", settings.apiKey);
-
-            // to allow usage against dev (internal)
-            _instance.donkyData.set("environment", settings.environment !== undefined ? settings.environment : "");
-
-            _instance.donkyData.set("scheme", settings.scheme !== undefined ? settings.scheme : "https://");
+        var message;
         
-            if (!_instance.donkyAccount.isRegistered()) {
-                // A brand new user ...
-                _instance.donkyAccount._register(settings, function(result) {
-                    if (result.succeeded) {
-                        _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
-                    }else{
-                        initStatus = initStatuses.failed;
-                    }
-                    settings.resultHandler(result);            
-                });
+        // Settings specified ?
+        if (settings === undefined || settings === null) {                
+            throw new Error("no options specified");
+        }
 
-            } else {
-                _instance.donkyAccount._checkToken(function(result) {
-                    if (result.succeeded) {
-                        _instance._initialize(settings);
-                    } else {
-                        settings.resultHandler(result);            
-                    }
-                }, 
-                true );
-            }
-		//}catch(e){
-		//	_instance.donkyLogging.errorLog("caught exception in initialise() : " + e );
-        //    if (settings!== undefined && _instance._isFunction(settings.resultHandler)) {
-        //        settings.resultHandler({succeeded : false});
-        //    }
-		//}
+        if(settings.newDeviceWarning !== undefined){
+            defaults.newDeviceWarning = settings.newDeviceWarning;                
+        }
+        if(settings.newDeviceTitle !== undefined){
+            defaults.newDeviceTitle = settings.newDeviceTitle;                
+        }
+        if(settings.newDeviceBody !== undefined){
+            defaults.newDeviceBody = settings.newDeviceBody;                
+        }
+
+        if(settings.logLevel !== undefined){
+            _instance.donkyLogging._setLogLevel(settings.logLevel);
+        }
+
+        // ResultHandler specified ?
+        if (!_instance._isFunction(settings.resultHandler)) {
+            _instance.donkyLogging.warnLog("No ResultHandler specified");
+            throw new Error("resultHandler not specified");
+        }
+        
+        if(initStatus === initStatuses.initialising){
+            message = "initialise() called twice";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));                
+        }
+                    
+        var browserInfo = _instance.donkyAccount._getBrowserInfo();
+        
+        if(browserInfo.name === "MSIE" && browserInfo.version < 10){
+            message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));
+        }               
+
+        // ApiKey specified ?
+        if (settings.apiKey === undefined) {
+            message = "No apiKey specified";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));
+        }
+
+        initStatus = initStatuses.initialising;
+
+        // Different API key ?
+        var currentKey = _instance.donkyData.get("apiKey");
+
+        if (currentKey !== null && currentKey !== settings.apiKey) {
+            // remove this and isRegistered() will return false;
+            _instance.donkyData.remove("networkId");
+        }
+
+        // internal for testing
+        if (settings.useSignalR === false) {
+            _instance.donkyNetwork._useSignalR(false);
+        } else {
+            _instance.donkyNetwork._useSignalR(true);
+        }
+
+        _instance.donkyData.set("apiKey", settings.apiKey);
+
+        // to allow usage against dev (internal)
+        _instance.donkyData.set("environment", settings.environment !== undefined ? settings.environment : "");
+
+        _instance.donkyData.set("scheme", settings.scheme !== undefined ? settings.scheme : "https://");
+    
+        if (!_instance.donkyAccount.isRegistered()) {
+            // A brand new user ...
+            _instance.donkyAccount._register(settings, function(result) {
+                if (result.succeeded) {
+                    _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                }else{
+                    initStatus = initStatuses.failed;
+                }
+                settings.resultHandler(result);            
+            });
+
+        } else {
+            _instance.donkyAccount._checkToken(function(result) {
+                if (result.succeeded) {
+                    _instance._initialize(settings);
+                } else {
+                    settings.resultHandler(result);            
+                }
+            }, 
+            true );
+        }
     };
 
-/**
- * Private method that actually processes the subscription
- */
+   /** 
+    * This operation should uninitialise the SDK
+    * Stops signalr
+    * returns status back to uninitialised (and hence can be reinitialised) 
+    * publish "DonkyUninitialised" event ....
+    *   do we need to have a "DonkyUninitialising" event or similar ? , do we need to ne notified that the intervals have been stopped ?
+    *   would be essy to just call clearInterval upon receipt of "DonkyUninitialised" local event    * clear _checkSynchronise() interval - via event
+    * clear _checkToken() interval - via event (in donkyAccount)
+    * remove the token ? any need to do this ?
+    * 
+    * calls to API should fail (need to check initStatus on calls that use rest api)
+    * @memberof DonkyCore
+    * @param {Callback} callback - callback function to be called after uninitialise has completed
+    */
+    DonkyCore.prototype.uninitialise = function(callback) {
+        if(initStatus === initStatuses.initialised){
+
+            // var signalRState = _instance.donkyNetwork._getSignalRState();
+
+            initStatus = initStatuses.uninitialising;
+
+            _instance.donkyNetwork._stopSignalR(function(){
+
+                initStatus = initStatuses.uninitialised;
+                _instance.publishLocalEvent({ type : "DonkyUninitialised", data: {} });
+
+                callback({succeeded: true});
+            });
+
+        }else{
+            callback({
+                succeeded: false,
+                message: "SDK is not Initialised"
+            });
+        }
+    };
+
+    /**
+     * Function to determine whether the SDK is initialised
+     * @returns {Boolean} - returns true if sdk is initialised, otherwise false
+     */
+    DonkyCore.prototype.isInitialised = function() {
+        return initStatus === initStatuses.initialised;
+    };
+
+
+    /**
+     *  Enum for initilisation statuses
+     *  @readonly
+     *  @enum {number}
+     */    
+    DonkyCore.prototype.initialisationStatus = initStatuses;
+
+
+    /**
+     * Function to get the initilisation status
+     * @returns {Number} - returns the initilisation status
+     */
+    DonkyCore.prototype.getInitialisationStatus = function() {
+        return initStatus;
+    };
+    
+
+    /**
+     * Private method that actually processes the subscription
+     */
     function _subscribe(moduleDefinition, subscriptions, subscriberArray, autoAcknowledge) {
 
         // if autoAcknowledge is undefined we will set it to true, otherwise we set to whatever it is set to
@@ -1337,7 +1424,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.2.1.2";
+        return "2.2.2.0";
     };
     
     /** 
@@ -1351,6 +1438,16 @@ var DonkyCore = (function() {
                 if(arguments[i].hasOwnProperty(key))
                     arguments[0][key] = arguments[i][key];
         return arguments[0];
+    };
+
+
+    /** 
+     * Internal function to determine whether argument is an object
+     * @param {obj} the object to test
+     * @returns {Boolean} - True if an object
+     */
+    DonkyCore.prototype._isObject = function(obj) {
+        return obj !== null && typeof obj === 'object';
     };
 
     /** 
@@ -1408,16 +1505,17 @@ var DonkyCore = (function() {
 
     /** 
      * Internal function to create a 'guid'
+     * http://stackoverflow.com/questions/105034/create-guid-uuid-in-javascript
      * @returns {String}
      */
     DonkyCore.prototype._uuid = function() {
-        var u = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,
-            function(c) {
-                var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
-                return v.toString(16);
-            });
-
-        return u;
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+        });
+        return uuid;
     };
 
     return DonkyCore;

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html ng-app='app'>
+  
+  <head>
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+      
+    <style>
+        .modal-header, #myModal h4, .close {
+            background-color: #5cb85c;
+            color:white !important;
+            font-size: 30px;
+        }
+        .modal-footer {
+            background-color: #f9f9f9;
+        }       
+    </style>  
+</head>
+  
+  <body>
+    <div class="container" >
+
+        <!-- Angular Directive to encapsulate all the functionality -->
+        <donky-simple-push></donky-simple-push>
+
+        <!-- Template for modal popup to display the push notification -->
+        <script type="text/ng-template" id="pushModalContent.html">
+            <div class="modal-header">
+                <button type="button" class="close" ng-click="close()">&times;</button>                
+                <h3 class="modal-title">{{pushMessage.data.senderDisplayName}}</h3>
+            </div>
+            <div class="modal-body" style="padding:40px 50px;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <img ng-src="{{formatAssetUrl(pushMessage.data.avatarAssetId)}}" class="img-circle" >
+                    </div>                    
+                    <div class="col-xs-8">
+                        <p>{{pushMessage.data.body}}</p>
+                    </div>                    
+                </div>
+            </div>
+            <div class="modal-footer" ng-show="buttons.length > 0">                               
+                <button type='button' ng-repeat="button in buttons" ng-click="handleClick(button)" class='btn btn-default' >{{button.buttonText}}</button>                
+            </div>
+        </script>
+        
+        <div class="container">
+            <div class="page-header" ng-controller="UserInfoCtrl">
+                <pre>{{donkyCoreFactory.userDetails}}</pre>
+            </div>
+        </div>	         
+    </div>
+        
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>              
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>       
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular-animate.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-1.1.1.js"></script>
+    
+    <!-- 
+        NOTE: We are not using require.js to pull in the donkyModules as there is no benefit when using logic directly. 
+        Each module will attach an instance of itself to the global namespase. 
+        An enhancement to this sample would be to wrap these global objects in services so you can inject them into your controllers / directives etc ...
+    -->
+    
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/coreAnalytics/donkyCoreAnalytics.min.js"></script>            
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/core/donkyCoreBundle.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/messaging/common/logic/donkyMessagingCommon.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/messaging/simplePush/logic/donkyPushLogic.min.js"></script>
+           
+    <script>
+        
+        /**
+         * Create our app module
+         */
+        var app = angular.module('app', ['ngAnimate', 'ui.bootstrap']);
+        
+        /**
+         * Add a run method to the app module and just initialise a fictitious user.  
+         */
+        app.run([ 'donkyCoreFactory', function(donkyCoreFactory){     
+                   
+            var userDetails = {
+                id: "johnsmith",
+                displayName: "John Smith",
+                firstName: "John",
+                lastName: "Smith",
+            };
+            
+            donkyCoreFactory.initialise(">>ENTER API KEY HERE<<", userDetails);            
+        }]);
+
+        /**
+         * Factory encapsulating the initialisation of the donky sdk and 
+         * shared access to the current userDetalls and registration state. 
+         */
+        app.factory('donkyCoreFactory', ['$q', function($q) {
+
+                /**
+                 * private method that does actual initialisation, using a promise to wrap the callback mechanism                 
+                 */ 
+                function _initialise(apiKey, userDetails){
+                    
+                    var deferred = $q.defer();
+                    
+                    donkyCore.initialise({
+                        apiKey: apiKey,
+                        userDetails: userDetails,                        
+                        resultHandler: function(result) {
+                            if(result.succeeded){
+                                deferred.resolve(result);
+                            }else{
+                                deferred.reject(result);
+                            }
+                        }
+                    });
+                    
+                    return deferred.promise;
+                };
+
+                var fac = {
+                    /**
+                     * Current user details object 
+                     */
+                    userDetails: donkyCore.donkyAccount.getRegistrationDetails().userDetails,                    
+                    /**
+                     * Boolean representing whether a user is registered or not 
+                     */
+                    isRegistered: donkyCore.donkyAccount.isRegistered(),                               
+                    /**
+                     * Method to initialise donky sdk - calls onto the private method which uses a promise and updates the user details in the then callback. 
+                     */           
+                    initialise: function(apiKey, userDetails){
+                        var self = this;
+                        _initialise(apiKey, userDetails).then(function(){
+                            self.userDetails = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
+                            self.isRegistered = true;                            
+                        });
+                    },                    
+                };
+                                        
+                return fac;           
+            }
+        ]);
+
+        /**
+         * Simple push handling logic has been encapsulatedinto a directive (note <donky-simple-push></donky-simple-push> in the markup).
+         * When a new push message message arrives, it is displayed in a modal popup (https://angular-ui.github.io/bootstrap/#/modal)
+         */
+        app.directive('donkySimplePush', [ function(){
+            
+            var controllerFn = ['$scope', '$element', '$window', '$uibModal',
+                function($scope, $element, $window, $uibModal) {
+                    
+                    $scope.modalActive = false;                     
+                    
+                    /**
+                     * Donky event handler to handle new push messages
+                     */                                                           
+                    donkyCore.subscribeToLocalEvent( "NewSimplePushMessagesReceived", function(event){ $scope.displayNextPushMessage(); });   
+                     
+                    /**
+                     * Function to display the next push message if there is one and the modal isn't already visible
+                     */   
+                    $scope.displayNextPushMessage = function(){
+                        if($scope.modalActive === false){
+                            var pushMessage = donkyPushLogic.getNextSimplePush();
+                            
+                            if(pushMessage !== null){
+                                
+                                $scope.modalActive = true;
+                                
+                                var modalInstance = $uibModal.open({
+                                    animation: true,
+                                    templateUrl: 'pushModalContent.html',
+                                    controller: 'pushModalInstanceCtrl',
+                                    backdrop: "static",
+                                    resolve: {
+                                        pushMessage: function () {
+                                            return pushMessage;
+                                        }
+                                    }
+                                });
+                                
+                                modalInstance.result.then(function () {
+                                    $scope.modalActive = false;
+                                    // render another ??
+                                    $scope.displayNextPushMessage();
+                                }, function () {
+                                    // dismiss handler - we are always using close() so won't go in here ... 
+                                });                    
+                            }                                                    
+                        }
+                    }
+                                        
+                    $scope.displayNextPushMessage();
+                
+                }];
+                
+            return {
+                restrict: 'EA',
+                scope: {},
+                controller: controllerFn
+            };            
+        }]);
+        
+        /**
+         * Minimal controller to access donky user info
+         */ 
+        app.controller( 'UserInfoCtrl', ['$scope', 'donkyCoreFactory', function($scope, donkyCoreFactory){
+            $scope.donkyCoreFactory = donkyCoreFactory;         
+        }]);
+        
+        /**
+         * Controller to manage the modal popup - the push message is injected in 
+         */
+        app.controller('pushModalInstanceCtrl', ['$scope', '$uibModalInstance', '$window', 'pushMessage', function ($scope, $uibModalInstance, $window, pushMessage) {
+            // attach the message to $scope
+            $scope.pushMessage = pushMessage;
+            // Get the interavtive buttons from the message object if there are any ...
+            $scope.buttons = donkyPushLogic.getInteractiveButtons(pushMessage);
+            
+            /**
+             * Click handler for the close button (top right). Donky is notified that the popup has been dismissed
+             */
+            $scope.close = function () {
+                donkyPushLogic.setSimplePushResult($scope.pushMessage.id, "");
+                $uibModalInstance.close();
+            };
+            
+            /**
+             * Click handler for interactive buttons. Donky is notified of the appropriate button click
+             */
+            $scope.handleClick = function(button){            
+                donkyPushLogic.setSimplePushResult($scope.pushMessage.id, button.buttonText);
+                
+                if (button.actionType === "Link" && button.linkURL !== "") {
+                    $window.open(button.linkURL);
+                }
+
+                $uibModalInstance.close();
+            }            
+            
+            /**
+             * Function to turn the assetId of the message into a URL that can be used as a src attribute for an img tag.
+             */
+            $scope.formatAssetUrl = function(avatarAssetId){
+                return donkyCore.formatAssetUrl(avatarAssetId);
+            }
+            
+        }]);        	 
+
+    </script>
+  </body>
+
+</html>

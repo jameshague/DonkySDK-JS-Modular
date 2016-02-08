@@ -167,6 +167,15 @@ var DonkyNetwork = (function() {
                     checkSynchroniseInterval = setInterval( function(){ _checkSynchronise(); }, defaults.checkSynchroniseInterval );                
                 }
             });
+
+            // This event is published on uninitialisation - after SignalR has stopped
+            donkyCore.subscribeToLocalEvent("DonkyUninitialised", function(event) {
+                if (checkSynchroniseInterval !== null) {
+                    /** Stop the maxSecondsWithoutSynchronize checker ...*/
+                    clearInterval(checkSynchroniseInterval);
+                    checkSynchroniseInterval = null;
+                }            
+            });            
         }
 
         // "DeviceCommsConnectionRetrySchedule":"5,2|30,2|60,1|120,1|300,9|600,6|900,*",
@@ -227,6 +236,11 @@ var DonkyNetwork = (function() {
  *  @param {Callback} callback - The call back to execute upon completion.
  */    
     DonkyNetwork.prototype.ajax = function(request, type, api, method, callback) {
+        // chck we are initialised
+        if(donkyCore.getInitialisationStatus() === donkyCore.initialisationStatus.uninitialised){
+            callback({ succeeded: false, statusCode: -1, response: "SDK Not initialised" });
+        }
+
         try {
             _instance._ajax(request, type, api, method, function(rslt) {
 
@@ -423,14 +437,18 @@ var DonkyNetwork = (function() {
 			signalrHubProxy.on("push", function (notifications) {
 				donkyCore.donkyLogging.debugLog("Push was called with notifications: " + JSON.stringify(notifications));
 
-				donkyCore._processServerNotifications(notifications); 
-                
-                // notify back immediately ...
-			    if (useSignalr) {
-                    _instance._synchroniseOverSignalR();
-			    } else {
-                    _instance._synchronizeOverREST();
-			    }
+                if(!synchronizing){
+                    donkyCore._processServerNotifications(notifications); 
+                    
+                    // notify back immediately ...
+                    if (useSignalr) {
+                        _instance._synchroniseOverSignalR();
+                    } else {
+                        _instance._synchronizeOverREST();
+                    }
+                }else{
+                    donkyCore.donkyLogging.debugLog("Already doing a sync so binning off - will get it in the response from synchronise");
+                }
 			});
 				
 			signalrInitialised = true;
@@ -447,7 +465,7 @@ var DonkyNetwork = (function() {
  *  @returns {Boolean}
  */    
     DonkyNetwork.prototype._isSignalRStarted = function() {
-        return signalrState == signalrStatuses.started;
+        return signalrState === signalrStatuses.started;
     };
 
 /**
@@ -494,14 +512,14 @@ var DonkyNetwork = (function() {
 		                            callback();
 		                        }
 
-                                _instance._synchroniseOverSignalR(function() {
+                                _instance._synchroniseOverSignalR(function(response) {
 
                                     donkyCore.publishLocalEvent({ type : "SignalRStarted", data: {} });
                                     // Did somenoe call synchronize whilst we were coming up and supply a callback ?
                                     // if so call it now
                                     if (syncWhenStartingCallback !== undefined) {
                                         donkyCore.donkyLogging.debugLog("syncWhenStartingCallback registered, calling ...");
-                                        syncWhenStartingCallback();
+                                        syncWhenStartingCallback(response);
                                         syncWhenStartingCallback = undefined;
                                     }
 
@@ -618,6 +636,10 @@ var DonkyNetwork = (function() {
                 case signalrStatuses.stopping:
 		            {
                         donkyCore.donkyLogging.warnLog("_stopSignalR() called when already stopping");
+                        // Call the callback in case someone is waiting on it
+		                if (donkyCore._isFunction(callback)) {
+		                    callback();
+		                }
 		            }
                     break;
 
@@ -651,6 +673,14 @@ var DonkyNetwork = (function() {
  */    
     DonkyNetwork.prototype._synchroniseOverSignalR  = function(callback) {
 
+        if(synchronizing){
+            donkyCore.donkyLogging.warnLog("synchronize called when already synchronizing");
+            if (donkyCore._isFunction(callback)) {
+                callback({ succeeded: false });
+            }
+            return;
+        }
+
         if (signalrState == signalrStatuses.started) {
 
             var args = donkyCore._getClientNotificationsToExecute();
@@ -674,7 +704,7 @@ var DonkyNetwork = (function() {
                     donkyCore._processServerNotifications(exchange_response.serverNotifications);
 
                     if (donkyCore._isArray(exchange_response.failedClientNotifications) && exchange_response.failedClientNotifications.length > 0) {
-                        donkyCore.donkyLogging.warnLog("Exchange returnewd some failed client notifications: " + JSON.stringify(exchange_response.failedClientNotifications));
+                        donkyCore.donkyLogging.warnLog("Exchange returned some failed client notifications: " + JSON.stringify(exchange_response.failedClientNotifications));
                     }
 
                     donkyCore.donkyData.remove("ExecutingClientNotifications");
@@ -714,6 +744,9 @@ var DonkyNetwork = (function() {
 
         if(synchronizing){
             donkyCore.donkyLogging.warnLog("synchronize called when already synchronizing");
+            if (donkyCore._isFunction(callback)) {
+                callback({ succeeded: false });    
+            }
             return;
         }
 
@@ -796,7 +829,9 @@ var DonkyNetwork = (function() {
 		    }
 		}catch(e){
 			donkyCore.donkyLogging.errorLog("caught exception in synchronise() : " + e );
-            callback();
+            if (donkyCore._isFunction(callback)) {
+                callback({succeeded: false});
+            }
         }    
     };
 

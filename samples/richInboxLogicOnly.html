@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Rich Inbox</title>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>          
+    
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet"/>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.min.js"></script>                               
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config.js"></script>
+    <style>
+        .modal-header, #myModal h4, .close {
+            background-color: #5cb85c;
+            color:white !important;
+            font-size: 30px;
+        }
+        .modal-footer {
+            background-color: #f9f9f9;
+        }
+       
+        #inboxListView li{
+            cursor: pointer;
+        }
+        
+        #inboxListView li img{
+            border:2px solid green;
+            width:60px;
+        }
+
+        /* Give unread messages a red border ...*/
+        #inboxListView li.unread img{
+            border:2px solid red;
+        }
+        
+        #inboxListView  .glyphicon-trash:hover{ color:red; }
+    </style>    
+</head>
+<body>
+    
+    <div class="container">
+        <div class="page-header"></div>
+        <div class="panel panel-default">
+            <div class="panel-heading">Rich Inbox Example</div>
+            <div  class="panel-body">
+                <!-- Dispay a list of rich messages in this panel -->                        
+                <ul id="inboxListView" class="list-group"></ul>    
+            </div>
+        </div>
+
+        <div id="logPanel"></div>
+        
+        <!-- Modal dialog to display the selected rich message -->
+        <div class="modal fade" id="myModal" role="dialog">
+            <div class="modal-dialog">            
+                <!-- Modal content-->
+                <div class="modal-content" id="message">
+                    <div class="modal-header" style="padding:35px 50px;">
+                    <button type="button" class="close" data-dismiss="modal">&times;</button>
+                    <h4 id="title">Rich Message </h4>
+                    </div>
+                    <div class="modal-body" style="padding:40px 50px;height:600px;">
+                        <iframe id="richMessage" frameborder="0" style="width: 100%; min-height: 100%"></iframe>
+                    </div>
+                </div>            
+            </div>
+        </div> 
+    </div>
+    
+    <!-- Moustache template to render a rich message in the list view -->
+    <script id="messageTpl" type="text/template">
+        <li data-message-id="{{messageId}}" class="list-group-item {{#unread}}unread{{/unread}} ">
+            <div class="row">
+                <div class="col-xs-2">
+                    <img class="img-circle" src="{{avatarURL}}" />
+                </div>
+                <div class="col-xs-10">                       
+                    <h4>
+                        {{{displayName}}}
+                        <span class="glyphicon glyphicon-trash pull-right" data-message-id="{{messageId}}"> </span>            
+                    </h4>
+                    <p>{{{description}}}</p>
+                    <small class="pull-right">{{sentTime}}</small>
+                </div>
+            </div>
+        </li>
+    </script>
+        
+    <script>
+    jQuery(function() {
+    // Handler for .ready() called.
+
+        // create jQuery object for logPanel and cache it 
+        var $logPanel = jQuery("#logPanel");
+        // function to perform logging
+        function log(message) {
+            $logPanel.append("<pre>" + message + "</pre>");
+        }
+        
+        var messageTemplate = jQuery('#messageTpl').html();
+        
+        // create jQuery object for inboxListView and cache it 
+        var $inboxListView = jQuery("#inboxListView");
+        
+        // create jQuery object for myModal and cache it 
+        var $modal = jQuery("#myModal").modal({show: false});
+
+        // get the donky interfaces we need for this demo ...
+        require(['donkyRichLogic', 'donkyCore', 'donkyCoreAnalytics', 'donkyUICommon', 'donkyMessagingCommon'], function(donkyRichLogic, donkyCore, donkyCoreAnalytics, donkyUICommon, donkyMessagingCommon) {
+
+            /** 
+             *  Click handler to display the selected rich message in a modal dialog            
+             */
+            jQuery( "#inboxListView" ).on( "click", "li", function() {
+                var $this = jQuery( this );    
+                // messageId was added as data in the tempate
+                var messageId =  $this.data("message-id");           
+                log( "click: " + messageId );    
+
+                // get the rich message ..
+                var message = donkyRichLogic.getRichMessage(messageId);
+                
+                // mark it as read if necessary
+                if(!message.isRead){
+                    donkyRichLogic.markRichMessageRead(messageId);
+                    $this.removeClass("unread");                    
+                }
+                
+                // get the iframe and write the rich message data into it (it is a complete html doc)
+                var $iframe = jQuery('#richMessage');
+
+                var iframeDocument = $iframe[0].contentWindow.document;
+
+				var isExpired = donkyMessagingCommon.isExpired(message.expiryTimeStamp);						
+
+                iframeDocument.open('text/html', 'replace');
+                iframeDocument.write(!isExpired ? message.body : message.expiredBody);
+                iframeDocument.close();
+                
+                // show modal
+                $modal.modal('show');            
+            });
+                        
+            /** 
+             * Click handler for the trash button            
+             */
+            jQuery( "#inboxListView" ).on( "click", ".glyphicon-trash", function() {
+                var $this = jQuery( this );    
+                var messageId =  $this.data("message-id");           
+                log( "delete: " + messageId );
+                
+                // delete the message ... 
+                donkyRichLogic.deleteRichMessage(messageId);
+                
+                // remove from UI ...                   
+                var $message = jQuery("#inboxListView li[data-message-id='" + messageId + "']"); 
+                
+                $message.fadeOut("slow", function(){
+                    $message.remove();
+                }); 
+                
+                // stop the event bubbling up
+                return false;
+            });            
+                
+            /**
+             * Function to append a message to the container 
+             */    
+            function appendMessage(message){
+                // create model for moustache template
+                var model = {
+                    messageId: message.messageId,
+                    displayName : message.senderDisplayName,
+                    sentTime : donkyUICommon.formatDate(message.sentTimestamp),
+                    avatarURL : donkyCore.formatAssetUrl(message.avatarAssetId),
+                    description : message.description,
+                    unread: !message.isRead,                    
+                };
+                // render template and append to end of the list
+                var html = Mustache.to_html(messageTemplate, model); 
+                
+                $inboxListView.append(html);
+            }
+
+
+            // subscribe to new messages ...
+            donkyCore.subscribeToLocalEvent( "NewRichMessagesReceived", function(event){                                     
+                // event object contains an array of messages 
+                var messages = event.data;
+                
+                // add them to the list view
+                donkyCore._each(messages, function(index, message){
+                    appendMessage(message);
+                });                
+            });
+
+            // initialise donky ...
+            donkyCore.initialise({
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+
+                    if(result.succeeded) {
+                        var registrationDetails = donkyCore.donkyAccount.getRegistrationDetails();
+
+                        log("Send rich message to the following user: \"" + registrationDetails.userDetails.id + "\"");
+                        
+                        // get all the current messages (after initialisation) and populate the list
+                        var messages = donkyRichLogic.getAllRichMessages();
+                                    
+                        donkyCore._each(messages, function(index, message){
+                            appendMessage(message);
+                        });
+                        
+                    }else{
+                        // Failure - log out the result object as it will contain an error message
+                        log(JSON.stringify(result, null, 4));
+    				}
+                }
+            });
+        });
+    });
+
+    </script>
+</body>
+</html>

@@ -197,8 +197,6 @@
                     assert.equal( notification.interactionType, "TwoButton", "notification.interactionType should be TwoButton" );
                     assert.equal( notification.buttonDescription, "Decline|Accept", "notification.buttonDescription should be Decline|Accept" );
                     assert.equal( notification.operatingSystem, "Web", "notification.operatingSystem should be Web" );
-                    // this is the last message so we are done
-                    done();
                 }
                 
                 function sniffAcknowledgement(notification){
@@ -229,6 +227,8 @@
                     assert.equal( msg === null, true, "Should be null" );            
                     console.log("<-- NewSimplePushMessagesReceived()");                                    
                     
+                    // this is the last message so we are done
+                    done();
                                 
                 });
         

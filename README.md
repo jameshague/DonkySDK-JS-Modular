@@ -147,6 +147,7 @@ This allows an integrator to potentially write their own UI from scratch if they
 ├───dependencies
 ├───images
 ├───modules
+│   ├───assets
 │   ├───automation
 │   ├───core
 │   ├───coreAnalytics
@@ -182,9 +183,9 @@ Internally, all associated dependencies with the interfaces you pick are resolve
 | [Initialise as known user](#initialise-known-user)  | Initialize as a known user 	|
 | [Send content](#send-content)  | Send a custom message to a known user 	|
 | [Receive content](#receive-content)  | Receive a custom message  	|
+| [Assets](#assets)  | Upload assets 	|
 | [Automation](#automation)  | Execute a third party trigger 	|
 | [Simple push](#simple-push)  | Receive and display a simple push message 	|
-| [Rich popup](#rich-popup)  | Receive a rich message and display it in a popup 	|
 | [Rich inbox](#rich-inbox)  | Receive a rich message and display it in an inbox 	|
 | [Rich inbox, Simple push with audio](#rich-inbox-simple-push-and-audio)  | Receive a rich message and display it in an inbox and play a sound 	|
 | [Embedding inbox into an iframe](#embedding-inbox-into-an-iframe-on-your-page)  | Embed inbox into an iframe in your site  	|
@@ -333,6 +334,48 @@ require(['donkyCore'],function(donkyCore) {
 ```
 JS Specific API docs for [subscribeToContentNotifications()](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyCore.html#subscribeToContentNotifications). 
 
+
+## Assets
+If you want to send a file to another user, rather than sending the file as part of the message payload, 
+you can upload it to Donky and create an asset. The assetId can be passed in the message rather than the file itself. 
+When the other user receives the message, they can download te asset using the assetId.
+
+There are 2 apis for uploading an asset, one uses an HTML5 FileList allowing a user to upload a list of files (collected with a file input). 
+The other is a lower level method where the raw data is supplied in base64 format. Here is a sample using uploadMessageAssetsFromFileList()
+
+Here is a file input that we willl use to select the file:
+```html
+    <input id="file" type="file"></input>
+```
+
+We initialize Donky and upload the file(s) when the change event on the file input fires: 
+```javascript
+require(['donkyCore', 'donkyAssets'], function(donkyCore, donkyAssets) {
+    donkyCore.initialise({
+        apiKey: ">>>Enter API Key here<<<",
+        resultHandler: function(result) {
+            if(result.succeeded) {
+       
+                jQuery("#file").change(function(event){
+                    
+                    donkyAssets.uploadMessageAsset(event.target.files[0], function(uploadResult){
+                        if(uploadResult.suceeded){
+                            // generate a url for the asset ...
+                            var url = donkyCore.formatAssetUrl(asset.assetId);
+                            // you can use this url to crete an "img", "a" tag or just download ... 
+                        }
+                    });                                           
+                });
+            }
+        }
+    });
+});
+```
+
+JS Specific API docs for assets [here](http://cdn.dnky.co/sdk/latest-early-access/jsdoc/DonkyAssets.html). 
+
+
+
 ## Automation
 A third party trigger is a mechanism to trigger a compaign when an application specific event has occured.
 For the porpose of this sample I will simply execute after initialisation. In the real world some application 
@@ -395,32 +438,7 @@ JS Specific API docs for [donkyPushUI](http://cdn.dnky.co/sdk/latest-modular/jsd
 [donkyPushLogic](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyPushLogic.html)
 
 
-## Rich Popup
-You can receive rich messages in the Javascript SDK and they can be displayed in a popup as in the sample image below. 
-You can customise the look and position of this popup. If you want to do this then visit the documentation [here](http://docs.mobiledonky.com/docs/js-rich-popup)
-Note: Rich messages can also be delivered into an inbox. See the next example for details.
 
-![](./samples/images/richPopup.png)
-
-Here is some sample code showing how to initialise Donky to receive rich messages and display them in in a popup.
-
-```javascript
-require(['donkyRichPopupUI','donkyCore', 'donkyCoreAnalytics'],function(donkyRichPopupUI,donkyCore, donkyCoreAnalytics) {
-
-    donkyCore.initialise({
-        apiKey: ">>>YOUR API KEY HERE<<<",
-        resultHandler: function(result) {
-            if(result.succeeded) {
-                donkyRichPopupUI.initialise();				
-            }
-        }
-    });
-});
-
-```
-Internally, donkyRichPopupUI uses the donkyRichLogic module. If you wish to build your own UI, you can just use donkyRichLogic to access the rich messages.
-JS Specific API docs for [donkyRichPopupUI](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyRichPopupUI.html) and
-[donkyRichLogic](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyRichLogic.html)
 
 ## Rich Inbox
 You can receive rich messages in the Javascript SDK and they can be displayed in an inboxp as in the sample image below. 
@@ -489,13 +507,13 @@ require(['donkyRichInboxUI', 'donkyInboxContainerUI', 'donkyPushUI', 'donkyCore'
     });    
 });
 ```
-Documentation for donkyAudio here[here](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyAudio.html)
+Documentation for donkyAudio [here](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyAudio.html)
 
 ## Embedding Inbox into an iframe on your page
 
 If you want to embed rich inbox into a div within your site rather than have the dock to the right, slide to open/close functionality you can do this with the donkyInboxEmbedUI plugin.
-The plugin expects an iframe with an id of "donkyInboxUIContainer" (this can be overriden). You can wrap it in a div to allow better positioning.
 Here is an html snippet with some style to place the iframe in an overlay:  
+
 ```html
 <style>
     #inbox-container{
@@ -527,8 +545,6 @@ require(['donkyRichInboxUI','donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytic
                 var options = {
                     // This is the div that we will insert the inbox into
                     iFrameContainer: "inbox-container",                    
-                    // we only have 1 view so don't show the index page   
-                    showIndexPage: false 
                 };                    
                 // Initialise the donkyInboxEmbedUI module
                 donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);						                        
@@ -537,6 +553,7 @@ require(['donkyRichInboxUI','donkyInboxEmbedUI', 'donkyCore', 'donkyCoreAnalytic
     });
 });
 ```
+
 
 # Grunt
 To build the release yourself and host yourself follow these steps:

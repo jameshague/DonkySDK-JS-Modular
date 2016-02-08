@@ -1,2 +1,0 @@
-2.2.1.0		20/08/2015		Embeddable container
-2.2.1.1		23/08/2015		Safari & Firefox patches

@@ -64,9 +64,9 @@
                         // Initialise the donkyRichInboxUI module
                         donkyRichInboxUI.initialise();
                         
-                        // Initialise the donkyInboxContainerUI module - note that we pass in the donkyRichInboxUI module in an array.
-                        // The job of the container is to host various views - we are just supplying the rich inbox view
-                        donkyInboxContainerUI.initialise([donkyRichInboxUI]);
+                        // Initialise the donkyInboxContainerUI module.
+                        // The job of the container is to host the rich inbox view
+                        donkyInboxContainerUI.initialise(donkyRichInboxUI);
 						
                     }else{
                         // Failure - log out the result object as it will contain an error message

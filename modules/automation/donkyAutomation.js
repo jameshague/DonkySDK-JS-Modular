@@ -48,6 +48,8 @@
                 });
 
                 // Queuing and syncing rather than sending in case we are in a sync call already
+                // TODO: add a callback ?
+                // TODO: extend with a method that just queues ?
                 donkyCore.donkyNetwork.synchronise();
             }
 		};

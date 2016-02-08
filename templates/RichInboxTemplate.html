@@ -1,25 +1,3 @@
-<script id="richInboxMenuItemTemplate" type="text/x-moustache-tmpl">
-    <div class="row donkyContainerIndex">
-        <div class="col-xs-2">
-            <span class="circle donkyContainerIndexBadge">
-                {{#unreadRichMessageCount}}
-                <span class="badge">{{unreadRichMessageCount}}</span>
-                {{/unreadRichMessageCount}}                        
-                <i class="fa fa-inbox"></i>
-            </span>                    
-        </div>
-        <div class="col-xs-8">
-            <span class="donkyContainerIndexName">Inbox</span>
-        </div>
-        <div class="col-xs-2">
-            <a class="btn donkyContainerIndexButton pull-right">
-                <span class="glyphicon glyphicon-chevron-right"></span>
-            </a>
-        </div>
-    </div>
-</script>
-
-
 <script id="richInboxListTemplate" type="text/x-moustache-tmpl">
     <form role="form">
     <ul class="list-group">
@@ -53,8 +31,6 @@
 
                 </div>
             </div>
-            
-
         </li>
         {{/Messages}}  
                 
@@ -72,9 +48,6 @@
         <div class="panel-heading">            
             <div class="row">
                 <div class="col-xs-4">
-                 {{#BackButton}}
-                    <a class="btn backToHomePage"><i class="fa fa-chevron-left"></i></a>
-                 {{/BackButton}}
                 </div>
                 <div class="col-xs-4 text-center">
                     <span class="panel-title">Inbox</span>                                       

@@ -27,7 +27,7 @@ var DonkyLogging = (function () {
     var _instance;
 
     var defaults = {
-        logLevel: logLevel.Debug,
+        logLevel: logLevel.Error,
         maxSize: 1024 * 1,
         key: "rollingLogfile"
     };

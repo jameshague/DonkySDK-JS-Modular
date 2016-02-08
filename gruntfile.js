@@ -30,10 +30,8 @@ module.exports = function (grunt) {
 					{ 'src': 'modules/messaging/common/ui/donkyUICommon.js', 'dest': outputDirectory + 'modules/messaging/common/ui/donkyUICommon.min.js' },
 					{ 'src': 'modules/messaging/simplePush/ui/donkyPushUI.js', 'dest': outputDirectory + 'modules/messaging/simplePush/ui/donkyPushUI.min.js' },
 					{ 'src': 'modules/messaging/rich/logic/donkyRichLogic.js', 'dest': outputDirectory + 'modules/messaging/rich/logic/donkyRichLogic.min.js' },
-					{ 'src': 'modules/messaging/rich/ui/donkyRichPopupUI.js', 'dest': outputDirectory + 'modules/messaging/rich/ui/donkyRichPopupUI.min.js' },
 					{ 'src': 'modules/messaging/common/ui/donkyInboxContainerUI.js', 'dest': outputDirectory + 'modules/messaging/common/ui/donkyInboxContainerUI.min.js' },
-					{ 'src': 'modules/messaging/rich/ui/donkyRichInboxUI.js', 'dest': outputDirectory + 'modules/messaging/rich/ui/donkyRichInboxUI.min.js' },
-					{ 'src': 'modules/messaging/chat/ui/donkyChatInboxUI.js', 'dest': outputDirectory + 'modules/messaging/chat/ui/donkyChatInboxUI.min.js' }
+					{ 'src': 'modules/messaging/rich/ui/donkyRichInboxUI.js', 'dest': outputDirectory + 'modules/messaging/rich/ui/donkyRichInboxUI.min.js' }
 				]
 			}
 		},
@@ -128,10 +126,8 @@ module.exports = function (grunt) {
 			'modules/messaging/simplePush/ui/donkyPushUI.js',
 			'modules/messaging/rich/logic/richMessageType.js',
 			'modules/messaging/rich/logic/donkyRichLogic.js',
-			'modules/messaging/rich/ui/donkyRichPopupUI.js',
 			'modules/messaging/common/ui/donkyInboxContainerUI.js',
-			'modules/messaging/rich/ui/donkyRichInboxUI.js',
-			'modules/messaging/chat/ui/donkyChatInboxUI.js'			  
+			'modules/messaging/rich/ui/donkyRichInboxUI.js'			  
 		 ],
 		  // configure JSHint (documented at http://www.jshint.com/docs/)
 		  options: {

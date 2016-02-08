@@ -37,7 +37,7 @@
 		 * @class DonkyAudio
 		 */
 		function DonkyAudio() {
-		    console.log("Constructing DonkyAudio");
+		    donkyCore.donkyLogging.infoLog("Constructing DonkyAudio");
 		}
 
         /**

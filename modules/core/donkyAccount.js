@@ -51,6 +51,40 @@ var DonkyAccount = (function () {
                 checkTokenInterval = setInterval(function () { _instance._checkToken(function () { }); }, defaults.tokenExpiryCheckInterval);
             }
         });
+        
+        donkyCore.subscribeToLocalEvent("DonkyUninitialised", function(event) {
+            if (checkTokenInterval !== null) {
+                clearInterval(checkTokenInterval);
+                checkTokenInterval = null;
+            }            
+        });
+        
+        donkyCore.subscribeToDonkyNotifications(
+            {
+                name: "donkyCore",
+                version: donkyCore.version()
+            },
+            [{
+                notificationType: "UserUpdated",
+                handler: function(notification) {             
+
+                    var userDetails = _instance.getRegistrationDetails().userDetails;
+
+                    userDetails.id = notification.data.externalUserId;
+                    userDetails.displayName = notification.data.displayName;
+                    userDetails.firstName = notification.data.firstName;
+                    userDetails.lastName = notification.data.lastName;
+                    userDetails.emailAddress = notification.data.emailAddress;
+                    userDetails.countryCode = notification.data.countryIsoCode;
+                    userDetails.mobileNumber = notification.data.phoneNumber;
+                    userDetails.isAnonymous = notification.data.isAnonymous;
+                    userDetails.avatarAssetId = notification.data.avatarAssetId;
+                    userDetails.additionalProperties = notification.data.additionalProperties;
+
+                    donkyCore.donkyData.set("userDetails", userDetails);
+                }
+            }],
+            true);        
 
         return _instance;
     }
@@ -184,8 +218,10 @@ var DonkyAccount = (function () {
             function (result) {
                 if (result.succeeded) {
                     donkyCore.donkyLogging.debugLog("Succesfully refreshed authorization token");
+                    
                     // server config returned with token
                     donkyCore.donkyData.set("configuration", result.response.configuration);
+
                     delete result.response.configuration;
                     // just store access dets
                     donkyCore.donkyData.set("accessDetails", result.response);
@@ -315,11 +351,15 @@ var DonkyAccount = (function () {
                 if (result.succeeded) {
 
                     donkyCore.donkyData.set("networkId", result.response.networkId);
+                    donkyCore.donkyData.set("networkProfileId", result.response.networkProfileId);
 
-                    // server config returned with token
-                    donkyCore.donkyData.set("configuration", result.response.accessDetails.configuration);
+
+                    var configuration = result.response.accessDetails.configuration;
                     delete result.response.accessDetails.configuration;
 
+                    // server config returned with token
+                    donkyCore.donkyData.set("configuration", configuration);
+                    
                     donkyCore.donkyData.set("accessDetails", result.response.accessDetails);
 
                     // was that anonymous ? 
@@ -342,7 +382,8 @@ var DonkyAccount = (function () {
                         type: "RegistrationChanged",
                         data: {
                             userDetails: currentUser,
-                            deviceDetails: registrationRequest.device
+                            deviceDetails: registrationRequest.device,
+                            configuration: configuration
                         }
                     });
                 }
@@ -503,12 +544,16 @@ var DonkyAccount = (function () {
             return( callback({
                 succeeded: false,
                 response: { failedClientNotifications: [{
-                            "failureReason": "Cannot call _updateRegistrationDetails() when a previous update is still in progress"
-                        }                        
-                ] }
+                        "failureReason": "Cannot call _updateRegistrationDetails() when a previous update is still in progress"
+                    }                        
+                ]}
             }));                
         }
         
+        var currentUserDetails = donkyCore.donkyData.get("userDetails");
+        var currentUserId = currentUserDetails !== null ? currentUserDetails.id : undefined;
+        var tokenNeedsRefreshing = currentUserId !== settings.userDetails.id && currentUserId !== undefined;
+
         extendDeviceDetails(args.device);
 
         updatingDetails = true;
@@ -527,8 +572,35 @@ var DonkyAccount = (function () {
                     delete args.device.secret;
 
                     donkyCore.donkyData.set("deviceDetails", args.device);
+
+                    if(tokenNeedsRefreshing){
+                        _instance._refreshToken(function(){
+                            callback(result);                                
+                        });
+                    }else{
+                        callback(result);                                                    
+                    }
+                }else{
+
+                    // Handle UserIdAlreadyTaken
+                    if( result.statusCode === 400 ){
+                        var userTaken = result.response.filter(function(elem){
+                            return elem.failureKey === "UserIdAlreadyTaken";
+                        });
+                        
+                        if(userTaken.length === 1){
+                            donkyCore.donkyLogging.warnLog("UserIdAlreadyTaken");
+                            _instance._register(settings, function(result){
+                                callback(result);
+                            });
+                        }else{
+                            callback(result);
+                        }
+                    }else{
+                        callback(result);
+                    }
+                                        
                 }
-                callback(result);
             });
     };
 
@@ -560,6 +632,11 @@ var DonkyAccount = (function () {
                 }));                
             }
 
+
+            var currentUserDetails = donkyCore.donkyData.get("userDetails");
+            var currentUserId = currentUserDetails !== null ? currentUserDetails.id : undefined;
+            var tokenNeedsRefreshing = currentUserId !== userDetails.id && currentUserId !== undefined;
+
             updatingDetails = true;
             donkyCore.donkyNetwork.ajax(
                 userDetails,
@@ -570,8 +647,42 @@ var DonkyAccount = (function () {
                     updatingDetails = false;
                     if (result.succeeded) {
                         donkyCore.donkyData.set("userDetails", userDetails);
-                    }                    
-                    callback(result);
+
+                        if(tokenNeedsRefreshing){
+                            _instance._refreshToken(function(){
+                                callback(result);                                
+                            });
+                        }else{
+                            callback(result);                                                    
+                        }
+
+                    }else{
+
+                        // Handle UserIdAlreadyTaken
+                        if( result.statusCode === 400 ){
+                            var userTaken = result.response.filter(function(elem){
+                                return elem.failureKey === "UserIdAlreadyTaken";
+                            });
+                            
+                            if(userTaken.length === 1){
+                                donkyCore.donkyLogging.warnLog("UserIdAlreadyTaken");
+
+                                var settings = {
+                                    userDetails: userDetails,
+                                    deviceDetails: donkyCore.donkyData.get("deviceDetails")
+                                };
+
+                                _instance._register(settings, function(result){
+                                    callback(result);
+                                });
+                            }else{
+                                callback(result);
+                            }
+                        }else{
+                            callback(result);
+                        }
+
+                    }              
                 });
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in updateUserDetails() : " + e);
@@ -735,8 +846,6 @@ var DonkyAccount = (function () {
         }
 
     };
-
-
 
     // Return the constructor
     return DonkyAccount;

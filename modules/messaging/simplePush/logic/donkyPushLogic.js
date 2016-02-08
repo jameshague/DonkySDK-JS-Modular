@@ -20,25 +20,6 @@
 		var donkyPushLogic;
                         
         var defaults = { 
-            // The title for a new device notification - This is a Mustache template - {{operatingSystem}} and {{model}} can be used within the template.   
-            newDeviceTitleTemplate : "New {{operatingSystem}} Device ?",
-            // The message body for a new device notification - This is a Mustache template - {{operatingSystem}} and {{model}} can be used within the template.
-            newDeviceBodyTemplate : "A new {{operatingSystem}} device ({{model}}) has been registered against your account; if you did not register this device please let us know immediately",
-            // Boolean to control whether to display the new device popup (default is true)
-            showNewDeviceWarning: true,
-            // Boolean to control whether to display the new Rich Message popup if inbox ix in closed state (default is true)
-            showRichMessagePopup: true,
-            // The title for a new rich message notification - This is a Mustache template - {{SenderName}} can be used within the template.
-            // Note: the message body will be the rich message desacription. 
-            richMessagePopupTitle: "New: <em>{{SenderName}}</em>",
-            // The title for multiple new rich messages notification
-            richMessagesPopupTitle: "<em>{{Count}}</em> New Messages",
-            // The body for multiple new rich messages notification
-            richMessagesPopupBody: "You have received {{Count}} new messages. Would you like to view them now?",
-            // Button text for the dismiss button
-            richMessagePopupDismissText: "Dismiss",
-            // Button text for the view messgae button (clicking this button opens the inbox on the message)
-            richMessagePopupViewText: "View"
         };
         
 		/**
@@ -234,206 +215,8 @@
 		// donkyPushLogic
 		//====================
 
-        function QueueNewRichMessagesPopup(event){
-            var messages = event.data;
-            if(donkyCore.isModuleRegistered("DonkyRichInboxUI") ){    
-                
-                // any non - silent notifications ?
-                var silent = true;
-                donkyCore._each(messages, function(index, message){
-                    if(!message.silentNotification){
-                        silent = false;
-                    }
-                });
-                                                        
-                if(defaults.showRichMessagePopup && !silent){
-                    var containerService = donkyCore.getService("donkyInboxContainerUIService");
-                    var donkyRichLogic = donkyCore.getService("donkyRichLogic");
-                    
-                    if (donkyRichLogic !== null && containerService !== null && !containerService.isOpen()) {
-    
-                        var dummy;
-                        
-                        if(messages.length == 1){
-                            dummy = {
-                                creator: "newRichMessages",
-                                id: messages[0].serverNotificationId,
-                                type: "SimplePushMessage",
-                                data: {
-                                    messageType: "SimplePush",
-                                    avatarAssetId: messages[0].avatarAssetId,
-                                    buttonSets: [
-                                        {
-                                            buttonSetId: null,
-                                            platform: "Web",
-                                            interactionType: "TwoButton",
-                                            buttonSetActions: [
-                                                {
-                                                    actionType: "Javascript",
-                                                    data: null,
-                                                    label: defaults.richMessagePopupDismissText
-                                                },
-                                                {
-                                                    /*Javascript*/
-                                                    actionType: "Javascript",
-                                                    /*code to execute*/
-                                                    data: btoa("jQuery(document).trigger('ViewRichMessage', ['" + messages[0].messageId + "']);"),
-                                                    label: defaults.richMessagePopupViewText
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
-                                    body: messages[0].description,
-                                    expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
-                                },
-                                "createdOn": messages[0].sentTimestamp
-                            };
-                        }else{
-                            dummy = {
-                                creator: "newRichMessages",
-                                id: donkyCore._uuid(),
-                                type: "SimplePushMessage",
-                                data: {
-                                    messageType: "SimplePush",
-                                    avatarAssetId: null,
-                                    buttonSets: [
-                                        {
-                                            buttonSetId: null,
-                                            platform: "Web",
-                                            interactionType: "TwoButton",
-                                            buttonSetActions: [
-                                                {
-                                                    actionType: "Javascript",
-                                                    data: null,
-                                                    label: defaults.richMessagePopupDismissText
-                                                },
-                                                {
-                                                    /*Javascript*/
-                                                    actionType: "Javascript",
-                                                    /*code to execute*/
-                                                    data: btoa("jQuery(document).trigger('ViewRichInbox');"),
-                                                    label: defaults.richMessagePopupViewText
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
-                                    body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
-                                    expiryTimeStamp: donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0])
-                                },
-                                "createdOn": messages[0].sentTimestamp
-                            };
-                            
-                        }   
-                        
-                        processPushMessages([dummy]);                 
-    
-                    }
-                }
-            }                            
-        }
 
-        function QueueNewChatMessagesPopup(event){
-            var messages = event.data;
-            if(donkyCore.isModuleRegistered("DonkyChatInboxUI") ){    
-                
-                // any non - silent notifications ?
-                var silent = true;
-                donkyCore._each(messages, function(index, message){
-                    if(!message.silentNotification){
-                        silent = false;
-                    }
-                });
-                                                        
-                if(defaults.showRichMessagePopup && !silent){
-                    var containerService = donkyCore.getService("donkyInboxContainerUIService");
-                    var donkyChatLogic = donkyCore.getService("donkyChatLogic");
-                    
-                    if (donkyChatLogic !== null && containerService !== null && !containerService.isOpen()) {
-    
-                        var dummy;
-                        
-                        if(messages.length == 1){
-                            dummy = {
-                                creator: "newChatMessages",
-                                id: messages[0].serverNotificationId,
-                                type: "SimplePushMessage",
-                                data: {
-                                    messageType: "SimplePush",
-                                    avatarAssetId: messages[0].avatarAssetId,
-                                    buttonSets: [
-                                        {
-                                            buttonSetId: null,
-                                            platform: "Web",
-                                            interactionType: "TwoButton",
-                                            buttonSetActions: [
-                                                {
-                                                    actionType: "Javascript",
-                                                    data: null,
-                                                    label: defaults.richMessagePopupDismissText
-                                                },
-                                                {
-                                                    /*Javascript*/
-                                                    actionType: "Javascript",
-                                                    /*code to execute*/
-                                                    data: btoa("jQuery(document).trigger('ViewChatMessage', ['" + messages[0].conversationId + "']);"),
-                                                    label: defaults.richMessagePopupViewText
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    senderDisplayName: Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
-                                    body: messages[0].description,
-                                    expiryTimeStamp: messages[0].expiryTimeStamp
-                                },
-                                "createdOn": messages[0].sentTimestamp
-                            };
-                        }else{
-                            dummy = {
-                                creator: "newChatMessages",
-                                id: donkyCore._uuid(),
-                                type: "SimplePushMessage",
-                                data: {
-                                    messageType: "SimplePush",
-                                    avatarAssetId: null,
-                                    buttonSets: [
-                                        {
-                                            buttonSetId: null,
-                                            platform: "Web",
-                                            interactionType: "TwoButton",
-                                            buttonSetActions: [
-                                                {
-                                                    actionType: "Javascript",
-                                                    data: null,
-                                                    label: defaults.richMessagePopupDismissText
-                                                },
-                                                {
-                                                    /*Javascript*/
-                                                    actionType: "Javascript",
-                                                    /*code to execute*/
-                                                    data: btoa("jQuery(document).trigger('ViewChatInbox');"),
-                                                    label: defaults.richMessagePopupViewText
-                                                }
-                                            ]
-                                        }
-                                    ],
-                                    senderDisplayName: Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
-                                    body: Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
-                                    expiryTimeStamp: messages[0].expiryTimeStamp
-                                },
-                                "createdOn": messages[0].sentTimestamp
-                            };
-                            
-                        }   
-                        
-                        processPushMessages([dummy]);                 
-    
-                    }
-                }
-            }                            
-            
-        }
+
 
 
 		/**
@@ -460,51 +243,13 @@
             donkyCore.subscribeToLocalEvent("RegistrationChanged", function(event) {
                 _pushMessageManager.removeAll();
             });        
-                                
-            // donkyPushUI can display a popup directing the user to the inbox 
-            
-            donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event){
-                QueueNewRichMessagesPopup(event);
-            });   
-            
-            donkyCore.subscribeToLocalEvent("NewChatMessagesReceived", function(event){
-                QueueNewChatMessagesPopup(event);
-            });
-            
-            donkyCore.subscribeToLocalEvent("NewDeviceAddedToUser", function(event){
-                var message = event.data;
-                if(defaults.showNewDeviceWarning){
-                    
-                    var dummy = {
-                        creator: "newDeviceWarning",
-                        id: message.id,
-                        type: "SimplePushMessage",
-                        data: {
-                            messageType: "SimplePush",
-                            avatarAssetId: null,
-                            buttonSets: [],
-                            senderDisplayName: Mustache.to_html(defaults.newDeviceTitleTemplate, message.data),
-                            body: Mustache.to_html(defaults.newDeviceBodyTemplate, message.data)
-                        },
-                        "createdOn": message.createdOn
-                    };
-    
-                    processPushMessages([dummy]);                                    
-                }                
-            });             
+                                      
 		}
 
         /**
          *  @memberof DonkyPushLogic 
          */
 		DonkyPushLogic.prototype = {
-            /**
-             * Function to set companion notification options (optional)
-			 * @param {Object} settings - intergrators settings to optionally overide any of the defaults 
-             */
-			setCompanionNotificationOptions: function(settings){
-                donkyCore._extend(defaults, settings);
-            },
             /**
 	         *  Get the next simple push message
              *  @returns {PushMessage} - the simple push message. 
@@ -601,7 +346,8 @@
                         };
 
                         donkyCore.queueClientNotifications(clientNotification);
-
+                        
+                        donkyCore.donkyNetwork.synchronise();
                     }
                 } else {
                     donkyCore.donkyLogging.warnLog( "setSimplePushResult(" + id + ", " + buttonText + ") - Coundn't find message in store");
@@ -627,6 +373,56 @@
                 return null;
             },
             /**
+             * Function to process the raw server notification nand extract the button set info in a consumable fashion
+             * @param  {Object} notification - the server notifications to 
+             * @returns {Object[]} - returns array of button objects
+             */
+            getInteractiveButtons : function(notification){
+                var message = notification.data;
+                
+                var buttons = [];
+
+                if (donkyCore._isArray(message.buttonSets) && message.buttonSets.length > 0) {
+
+                    donkyCore._each(message.buttonSets, function(index, buttonSet) {
+
+                        if (buttonSet.platform == "Web") {
+
+                            donkyCore._each(buttonSet.buttonSetActions, function(index, action) {
+
+                                var button = {
+                                    buttonText: action.label
+                                };
+
+                                switch (action.actionType) {
+                                    case "Javascript":
+                                        button.actionType = "Javascript";
+                                        if( action.data !== null){
+                                            button.linkURL = action.data;
+                                        }
+                                        break;
+                                   
+                                   case "Dismiss":
+                                        button.actionType = "Dismiss";
+                                        break;
+                                        
+                                    default:
+                                        button.actionType = "Link";
+                                        if (action.data !== null) {
+                                            button.linkURL = action.data;
+                                        }
+                                        break;
+                                }
+
+                                buttons.push(button);
+                            });
+                        }
+                    });
+                }
+
+                return buttons;                
+            },            
+            /**
 	         * Deletes push messages by creator field. Some push messages don't originate from donky network - they are created on-the-fly.
              * i.e. a popup to tell the user that there is a new rich mesage available. These messages have a creator property added to them so we can filter them out if necessary.
              * If we want to remove all of these we can use this method.
@@ -635,7 +431,60 @@
 	         */
             deleteMessagesByCreator : function(creator){
                 _pushMessageManager.removeMessagesByCreator(creator);
-            }
+            },
+            /**
+             * Function to queue a custom popup with a custom action.
+             * Whether to show based on config and if a silentNotification should be checked outside of this. 
+             * Also what to display and what the action is is de-scoped from this method.
+             *
+            * @param {String} creator - the creator label to apply (can delete all messages with the same label)
+            * @param {String} title - the message title         
+            * @param {String} body - the message body         
+            * @param {String} expiry - the message expiry timestamp  
+            * @param {String} actionButtonA - the action to execute when Button A is clicked.
+            * @param {String} actionButtonB - the action to execute when Button B is clicked.
+            * @param {String} textButtonA - the text to display on the ok button
+            * @param {String} textButtonB - the text to display on the dismiss button
+            */
+            queueCustomPopup : function(creator, title, body, expiry, actionButtonA, actionButtonB, textButtonA, textButtonB){
+
+                var dummy = {
+                    creator: creator,
+                    id: donkyCore._uuid(),
+                    type: "SimplePushMessage",
+                    data: {
+                        messageType: "SimplePush",
+                        avatarAssetId: null,
+                        buttonSets: [],
+                        senderDisplayName: title,
+                        body: body,
+                        expiryTimeStamp: expiry
+                    },
+                    "createdOn": new Date().toISOString()
+                };
+                
+                if(actionButtonA !== undefined){
+                    dummy.data.buttonSets = [{
+                            buttonSetId: null,
+                            platform: "Web",
+                            interactionType: "TwoButton",
+                            buttonSetActions: [{
+                                actionType: "Javascript",
+                                data: actionButtonA !== null ? btoa(actionButtonA) : null,
+                                label: textButtonA
+                            },{
+                                /*Javascript*/
+                                actionType: "Javascript",
+                                /*code to execute*/
+                                data: actionButtonB !== null ? btoa(actionButtonB) : null,
+                                label: textButtonB
+                            }]
+                        }];
+                }
+                
+
+                processPushMessages([dummy]); 
+            }            
 		};
 
 		// "static" instance

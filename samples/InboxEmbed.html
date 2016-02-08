@@ -68,18 +68,25 @@
     <div class="container">
       <!-- Example row of columns -->
       <div class="row">
-        <div class="col-md-4">
+        <div class="col-md-3 col-xs-6">
           <div id="inbox-container">
           </div>
         </div>
-        <div class="col-md-4">
+        <div class="col-md-3 col-xs-6">
           <h2>Interesting content</h2>
           <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
           <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
           <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
           <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
        </div>
-        <div class="col-md-4">
+        <div class="col-md-3 col-xs-6">
+          <h2>Interesting content</h2>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
+          <p><a class="btn btn-default" href="#" role="button">View details &raquo;</a></p>
+       </div>
+        <div class="col-md-3 col-xs-6">
           <h2>Some more content</h2>
           <p>Donec sed odio dui. Cras justo odio, dapibus ac facilisis in, egestas eget quam. Vestibulum id ligula porta felis euismod semper. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus.</p>
           <p>Donec id elit non mi porta gravida at eget metus. Fusce dapibus, tellus ac cursus commodo, tortor mauris condimentum nibh, ut fermentum massa justo sit amet risus. Etiam porta sem malesuada magna mollis euismod. Donec sed odio dui. </p>
@@ -130,17 +137,11 @@
                             * This is the div that we will insert the inbox into
                             */
                             iFrameContainer: "inbox-container",
-                            /**
-                            * We only have a single view and we don't require an index page to be rendered
-                            */                                             
-                            showIndexPage: false
                          };
                         
-                        // Initialise the donkyInboxContainerUI module - note that we pass in the donkyRichInboxUI module in an array.
-                        // The job of the container is to host various views - we are just supplying the rich inbox view. 
-                        // in this demo, we are passing in some config in the second parameter. Seeing that there is only a single view, 
-                        // an index page is unnecessary so we are telling the container not to display the index page
-                        donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);
+                        // Initialise the donkyInboxContainerUI module.
+                        // The job of the container is to host the rich inbox view. 
+                        donkyInboxEmbedUI.initialise(donkyRichInboxUI, options);
 						
                         // click handler for the synchronise button, allows us to sync whenever we want
 						jQuery("#synchroniseButton").click(function(){

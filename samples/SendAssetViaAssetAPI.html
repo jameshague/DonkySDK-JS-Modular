@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Send Image</title>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>                                 
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config-debug.js"></script>
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+
+	<style type="text/css">
+		body{
+			font-family: 'Segoe UI';
+			font-size: 12pt;
+		}
+
+		header h1{
+			font-size:12pt;
+			color: #fff;
+			background-color: #1BA1E2;
+			padding: 20px;
+		}
+
+		article{
+			width: 80%;
+			margin:auto;
+			margin-top:10px;
+		}
+
+		.thumbnail{
+			height: 100px;
+			margin: 10px;    
+		}	
+
+        #loading{
+			display:inline-block;
+		}
+
+        .loading{
+        	background-image: url(https://cdn.dnky.co/sdk/latest-modular/images/ajax-loader.gif);
+            width:32px;
+            height:32px; 
+        }
+
+
+	</style>
+</head>
+
+<body>
+
+	<header>
+        <h1>Send Image Demo</h1>
+    </header>
+
+    <article>
+        <button id="synchroniseButton" class="btn btn-default">Synchronise</button>
+        <br/>
+        <label for="files">Select file: </label>
+        <input id="files" type="file" class="form-control"></input>
+        <output id="result" />
+    </article>
+
+    <article>    
+        <input id="users" type="text" />
+        <button id="createAssets" class="btn btn-default">create assets</button>
+        <div id="loading"></div>
+        <button id="send" class="btn btn-default">send notification</button>
+    </article>
+
+    <div id="logPanel"></div>
+	<div id="imagePanel"></div>
+
+    <script>
+	
+	function log(message) {
+		jQuery("#logPanel").append("<div>" + message + "</div>");
+	}
+
+	var output = document.getElementById("result");
+
+
+	/**
+	 * Function to display an asset on the page - called either when creating an asset or when receiving an asset from a custom content notification.
+	 * A n appropriate html element is created based on the mime type of te attachment. the fallback is just a hyperlink.
+	 */
+	function appendAssetToPage(donkyCore, asset){
+
+		// create a URL from the assetId so we can download it ...
+		var url = donkyCore.formatAssetUrl( asset.assetId );
+
+        var div1 = document.createElement("div");
+
+        // Just log out the asset object ...
+       	div1.innerHTML = "<pre>" + JSON.stringify(asset) + "</pre>";
+
+        output.insertBefore(div1, null);            
+
+        var div2 = document.createElement("div");
+
+        if(asset.mimeType.match('image')){
+        	div2.innerHTML = "<img class='thumbnail' src='" + url + "'/>";
+        }
+        else if(asset.mimeType.match('audio')){
+			div2.innerHTML = "<audio controls src='" + url + "' type='" + asset.mimeType + "'>Your browser does not support the audio element.</audio>";
+        }
+        else if(asset.mimeType.match('video')){
+			div2.innerHTML = "<video controls src='" + url + "' type='" + asset.mimeType + "'>Your browser does not support the video element.</video>";
+		}
+        else{
+			div2.innerHTML = "<a  target='_blank' href='" + url + "'>" + asset.name + "</a>";
+        }
+        
+        output.insertBefore(div2, null);            
+
+	}
+
+	
+	// Check File API support
+    if(window.File && window.FileList && window.FileReader){
+		
+		var file;
+        
+        // change handler for the file input
+        jQuery("#files").change(function(event){            
+            file = event.target.files[0]; // FileList object                                     
+        });
+    	
+        require(['donkyCore', 'donkyAssets'], function(donkyCore, donkyAssets) {
+
+            // setup a Content Notification subscription ...
+            donkyCore.subscribeToContentNotifications({
+                name: "demoApp",
+                version: "1.0.0.0",
+            },
+			{
+				notificationType: "shareAsset",
+				handler: function(notification) {			
+					var asset = notification.data.customData.asset;
+					appendAssetToPage(donkyCore, asset);
+				}
+			});		
+			
+		
+			// Initialise donky
+            donkyCore.initialise({
+                
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+
+                    log("<code>" + JSON.stringify(result) + "</code>");
+
+                    if(result.succeeded) {
+                    	// log out registration details ...
+                        var registrationDetails = donkyCore.donkyAccount.getRegistrationDetails();
+                        log("<code>"+JSON.stringify(registrationDetails)+"</code>");
+						
+						jQuery("#users").val(registrationDetails.userDetails.id);
+						
+
+						// click handler for the synchronise button - just performs a network synchronise
+                        jQuery("#synchroniseButton").click(function(){
+							donkyCore.donkyNetwork.synchronise();
+						});
+
+                        var createdAsset;
+
+                        // Click handler for the create asset button ...
+						jQuery("#createAssets").click(function(){
+							// If a file has been selected ...
+							if(file !== undefined){
+								jQuery("#loading").addClass("loading");
+
+								// create an asset ...
+								donkyAssets.uploadMessageAsset(file, function(result){
+									jQuery("#loading").removeClass("loading");
+									console.log(JSON.stringify(result));
+
+									if(result.succeeded){
+										createdAsset = result.asset;
+										// append to the page
+										appendAssetToPage(donkyCore, result.asset);
+									}else{
+										// something went wrong, log out the request ...
+										log(JSON.stringify(result));
+									}
+								});
+							}
+						});
+
+						// click handler for send  notification button.
+						jQuery("#send").click(function(){
+
+							if(createdAsset !== undefined){
+																
+								// define a data object to pass the asset info 								
+								var data = { 
+									"asset": createdAsset
+								};
+								// users text input is used to supply a comma separated list of userId's		
+								var users = jQuery("#users").val().split(",");
+
+								// create a custom notification
+								var notification = donkyCore.createContentNotificationForSpecifiedUsers(users, "shareAsset", data);
+
+								log("<code>"+JSON.stringify(notification)+"</code>");
+								
+								// send it
+								donkyCore.sendContentNotifications(notification, function(result2) {
+								    if (!result2.succeeded) {
+								        if (result2.response !== undefined) {
+								        	// there was an error ... log it ...
+								            alert(result2.response.failedClientNotifications.length + " invalid notification(s)");
+                                        }								        
+								    }
+								});								
+							}
+						});
+                    }
+                }
+            });
+        });
+	}
+    else{
+        console.log("Your browser does not support File API");
+    }
+
+    </script>
+</body>
+</html>

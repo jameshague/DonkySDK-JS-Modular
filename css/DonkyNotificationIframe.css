@@ -1,22 +1,31 @@
-﻿
+
 /*
 ==============================================
 iframe styles
 ==============================================
 */
 
-#donkySimplePushIframe{
-	position:fixed;
-	top:0;
-	z-index:1000000;
-	width:100%;
-	padding: 0;
+@media (max-width: 640px) {
+	#donkySimplePushIframe{
+		background-color: transparent;
+		position:fixed;
+		top:0;
+		z-index:1000000;
+		width:100%;
+		padding: 0;
+		right:0;
+	}
 }
 
 @media (min-width: 640px) {
 	#donkySimplePushIframe{
-		right:0;
-		top:70%;
+		background-color: transparent;
+		position:fixed;
+		z-index:1000000;
+		width:100%;
+		padding: 0;
+		right:15px;
+		bottom:15px;
 		width:450px;
 	}
 }

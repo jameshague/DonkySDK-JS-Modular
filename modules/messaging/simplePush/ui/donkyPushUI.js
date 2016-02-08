@@ -111,47 +111,8 @@
 			 * @returns {Object[]} - returns array of button Objects, each containing the following properties: buttonText, className, linkURL, ButtonHtml, ButtonAttributes
 			 */
             getButtons: function(notification) {
-
-				var message = notification.data;
 				
-                var buttons = [];
-
-                if (donkyCore._isArray(message.buttonSets) && message.buttonSets.length > 0) {
-
-                    donkyCore._each(message.buttonSets, function(index, buttonSet) {
-
-                        if (buttonSet.platform == "Web") {
-
-                            donkyCore._each(buttonSet.buttonSetActions, function(index, action) {
-
-                                var button = {
-                                    buttonText: action.label
-                                };
-
-                                switch (action.actionType) {
-                                    case "Javascript":
-                                        button.actionType = "Javascript";
-                                        if( action.data !== null){
-                                            button.linkURL = action.data;
-                                        }
-                                        break;                                    
-                                    case "Dismiss":
-                                        button.actionType = "Dismiss";
-                                        break;
-                                    default:
-                                        button.actionType = "Link";
-                                        if (action.data !== null) {
-                                            button.linkURL = action.data;
-                                        }
-                                        break;
-                                }
-
-                                buttons.push(button);
-                            });
-                        }
-                    });
-                }
-
+                var buttons = donkyPushLogic.getInteractiveButtons(notification);
 
                 var buttonHtml = "";
                 var buttonAttribs = "";
@@ -179,7 +140,7 @@
             },
 			/**
 			 * Function to physically render the push notification. An iframe is appended to the dom and then a dynamically generated document is applied to it.
-			 * THis document contains mark up, css and script. The markup for the actual notification is genetared from a Mustache template.
+			 * This document contains mark up, css and script. The markup for the actual notification is genetared from a Mustache template.
 			 * @param {String} template - the Mustache template tht generates the push notification markup
 			 * @param {Object} model - the model to use in conjunction with the Mustache template.
 			 * @param {Boolean} animate - whether to animate the displaying of the notification.
@@ -264,12 +225,15 @@
                 var pushMessageCount = donkyPushLogic.getMessageCount();
                 var unreadPushMessageCount = pushMessageCount - 1;
 
+                var buttons = this.getButtons(notification);
                 var model = {
                     AvatarUrl: (message.avatarAssetId !== null && message.avatarAssetId !== "") ? donkyCore.formatAssetUrl(message.avatarAssetId) : defaults.defaultAvatar,					
                     NotificationId: notification.id,
                     SenderDisplayName: message.senderDisplayName,
                     Body: message.body,
-                    Buttons: this.getButtons(notification),
+                    Buttons: buttons,
+                    Is1Button: buttons.length === 1,
+                    Is2Button: buttons.length === 2,
                     // Badge doesn't show if span contains empty string
                     UnreadCount: unreadPushMessageCount > 0 ? unreadPushMessageCount : "",
                     ResponsiveStyle: document.body.clientWidth < 768 ? "forMobile" : "forDesktop",

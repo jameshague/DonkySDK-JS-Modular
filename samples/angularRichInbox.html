@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html ng-app='app'>
+  
+  <head>
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet">
+      
+    <style>
+        .modal-header, #myModal h4, .close {
+            background-color: #5cb85c;
+            color:white !important;
+            font-size: 30px;
+        }
+        .modal-footer {
+            background-color: #f9f9f9;
+        }
+       
+        #inboxListView li{
+            cursor: pointer;
+        }                
+        #inboxListView li img{
+            border:2px solid green;
+            width:60px;
+            height:60px;
+        }
+
+        /* Give unread messages a red border ...*/
+        #inboxListView li.unread img{
+            border:2px solid red;
+        }
+        
+        #inboxListView  .glyphicon-trash:hover{color:red;}
+    </style>  
+</head>
+  
+  <body>
+    <div class="container" >
+
+        <script type="text/ng-template" id="richModalContent.html">
+            <div class="modal-header">
+                <button type="button" class="close" ng-click="close()">&times;</button>                
+                <h3 class="modal-title">Rich Message</h3>
+            </div>
+            <div class="modal-body">
+                <rich-message ng-model="richMessage"></rich-message>
+            </div>
+        </script>
+        
+        <div class="container">
+            <div class="page-header" ng-controller="UserInfoCtrl">
+                <pre>{{donkyCoreFactory.userDetails}}</pre>
+            </div>
+            <div class="panel panel-default" ng-controller="RichListCtrl">
+                <div class="panel-heading">Rich Inbox Example <span ng-show="richMessagesFactory.unreadCount > 0" class="badge pull-right">{{richMessagesFactory.unreadCount}}</span></div>
+                <div  class="panel-body">
+                    <!-- Dispay a list of rich messages in this panel -->                        
+                    <ul id="inboxListView" class="list-group">
+                        
+                        <li class="list-group-item" ng-repeat="richMessage in richMessagesFactory.messages" ng-click="viewRichMessage(richMessage)" ng-class="{unread: !richMessage.isRead}">
+                            <div class="row">
+                                <div class="col-xs-2">
+                                    <img class="img-circle" ng-src="{{utilsFactory.formatAssetUrl(richMessage.avatarAssetId)}}" />
+                                </div>
+                                <div class="col-xs-10">           
+                                    <h4>
+                                        {{richMessage.senderDisplayName}}
+                                        <span class="glyphicon glyphicon-trash pull-right" ng-click="deleteRichMessage(richMessage)"></span>            
+                                    </h4>
+                                    <p>{{richMessage.description}}</p>
+                                    <small class="pull-right">{{utilsFactory.formatDate(richMessage.sentTimestamp)}}</small>
+                                </div>
+                            </div>
+                        </li>                                        
+                    </ul>    
+                </div>
+            </div>            
+        </div>	         
+    </div>
+        
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>              
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>       
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/angularjs/1.4.9/angular-animate.js"></script>
+    <script src="//angular-ui.github.io/bootstrap/ui-bootstrap-tpls-1.1.1.js"></script>
+    
+    <!-- 
+        NOTE: We are not using require.js to pull in the donkyModules as there is no benefit when using logic directly. 
+        Each module will attach an instance of itself to the global namespase. 
+        An enhancement to this sample would be to wrap these global objects in services so you can inject them into your controllers / directives etc ...
+    -->
+    
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/coreAnalytics/donkyCoreAnalytics.min.js"></script>            
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/core/donkyCoreBundle.min.js"></script>       
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/messaging/common/logic/donkyMessagingCommon.min.js"></script>
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/messaging/rich/logic/donkyRichLogic.min.js"></script>
+           
+    <script>
+        
+        /**
+         * Create our app module
+         */
+        var app = angular.module('app', ['ngAnimate', 'ui.bootstrap']);
+        
+        /**
+         * Add a run method to the app module and just initialise a fictitious user.  
+         */
+        app.run([ 'donkyCoreFactory', function(donkyCoreFactory){     
+                   
+            var userDetails = {
+                id: "johnsmith",
+                displayName: "John Smith",
+                firstName: "John",
+                lastName: "Smith",
+            };
+
+            donkyCoreFactory.initialise(">>ENTER API KEY HERE<<", userDetails);            
+        }]);
+
+        /**
+         * Factory encapsulating the initialisation of the donky sdk and shared access to the current userDetalls and registration state. 
+         */
+        app.factory('donkyCoreFactory', ['$q', function($q) {
+
+                /**
+                 * private method that does actual initialisation, using a promise to wrap the callback mechanism                 
+                 */ 
+                function _initialise(apiKey, userDetails){
+                    
+                    var deferred = $q.defer();
+                    
+                    donkyCore.initialise({
+                        apiKey: apiKey,
+                        userDetails: userDetails,
+                        resultHandler: function(result) {
+                            if(result.succeeded){
+                                deferred.resolve(result);
+                            }else{
+                                deferred.reject(result);
+                            }
+                        }
+                    });
+                    
+                    return deferred.promise;
+                };
+
+                var fac = {
+                    /**
+                     * Current user details object 
+                     */                    
+                    userDetails: donkyCore.donkyAccount.getRegistrationDetails().userDetails,
+                    /**
+                     * Boolean representing whether a user is registered or not 
+                     */                    
+                    isRegistered: donkyCore.donkyAccount.isRegistered(),
+                    /**
+                     * Method to initialise donky sdk - calls onto the private method which uses a promise and updates the user details in the then callback. 
+                     */           
+                    initialise: function(apiKey, userDetails){
+                        var self = this;
+                        _initialise(apiKey, userDetails).then(function(){
+                            self.userDetails = donkyCore.donkyAccount.getRegistrationDetails().userDetails;
+                            self.isRegistered = true;                            
+                        });
+                    },                    
+                };
+                                        
+                return fac;           
+            }
+        ]);
+        /**
+         * Factory encapsulating the rich logic API. 
+         */
+        app.factory('richMessagesFactory', [ '$timeout',  function( $timeout ){
+            
+            var fac = {
+                /**
+                 * Array containing the current rich messages
+                 */
+                messages: donkyRichLogic.getAllRichMessages(),
+                /**
+                 * Number of unread messages (used for a badge count)
+                 */
+                unreadCount: donkyRichLogic.getMessageCount().unreadRichMessageCount,
+                /**
+                 * Function to delete a rich message - deletes from donky and also splices out of the messages array
+                 */
+                delete: function(message){
+                    var index = this.messages.indexOf(message);
+                    this.messages.splice(index, 1);
+                    donkyRichLogic.deleteRichMessage(message.messageId);                    
+                },
+                /**
+                 * Function to mark a message as read
+                 */                
+                markAsRead: function(message){
+
+                    if (message.isRead === false) {
+                        donkyRichLogic.markRichMessageRead(message.messageId);
+                        message.isRead = true;
+                        this.unreadCount--;
+                    }                
+                }            
+            };
+
+            /**
+             * Donky event handler to handle new rich message(s) being received 
+             */
+            donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event) {
+
+                var messages = event.data;
+
+                // wrap the modification of the messages array in a timeout as we can't call $scope.$apply() in a factory.
+                // Angular won't know the array has beenupdated otherwise ...
+                $timeout(function() {
+                    donkyCore._each(messages, function(index, message) {
+                        fac.messages.unshift(message);
+                    });
+                    
+                    fac.unreadCount = donkyRichLogic.getMessageCount().unreadRichMessageCount;
+                }, 0);
+            });
+                       
+            /**
+             * Donky event handler to handle registration changed event (all local messages removed when this happens) 
+             */
+            donkyCore.subscribeToLocalEvent("RegistrationChanged", function(event) {
+                // Angular won't know the array has beenupdated otherwise ...
+                $timeout(function() {
+                    fac.messages = [];
+                    fac.unreadCount = 0;
+                }, 0);
+            });            
+                        
+            return fac;
+        }]);
+        
+        /**
+         * Minimal controller to access donky user info
+         */ 
+        app.controller( 'UserInfoCtrl', ['$scope', 'donkyCoreFactory', function($scope, donkyCoreFactory){
+            $scope.donkyCoreFactory = donkyCoreFactory;         
+        }]);
+
+        /**
+         * Controller to manage displaying a list of rich messages
+         */
+        app.controller('RichListCtrl', ['$scope', '$uibModal', 'richMessagesFactory', 'utilsFactory',
+            function($scope, $uibModal, richMessagesFactory, utilsFactory) {
+
+                $scope.richMessagesFactory = richMessagesFactory;
+                $scope.utilsFactory = utilsFactory;
+
+                // function to view a rich message - it is displayed in a modal popup (https://angular-ui.github.io/bootstrap/#/modal)
+                $scope.viewRichMessage = function(richMessage){
+                    richMessagesFactory.markAsRead(richMessage);
+
+                    var modalInstance = $uibModal.open({
+                        animation: true,
+                        templateUrl: 'richModalContent.html',
+                        controller: 'RichModalInstanceCtrl',
+                        resolve: {
+                            richMessage: function () { return richMessage; }
+                        }
+                    });
+                    // not returning anything from the modal so ok / dismiss callbacks are empty ... 
+                    modalInstance.result.then(function () {}, function () {});                    
+                }
+
+                /**
+                 * Function to delete a message - just calls onto the factory method
+                 */
+                $scope.deleteRichMessage = function(richMessage) {
+                    richMessagesFactory.delete(richMessage);
+                }                
+            }
+        ]);	
+                
+        /**
+         * Controller to manage displaying a rich message - richMessage is injected in ... 
+         * The actual display is done with the below directive 
+         */
+        app.controller('RichModalInstanceCtrl', ['$scope', '$uibModalInstance', 'richMessage', function ($scope, $uibModalInstance, richMessage) {
+
+            $scope.richMessage = richMessage;
+
+            $scope.close = function () {
+                $uibModalInstance.close();
+            };
+        }]);     
+        
+        /**
+         * Directive to display a rich message in an iframe.
+         */
+        app.directive('richMessage', function() {
+            var linkFn = function(scope, element, attrs) {
+
+                var $iframe = element.find('iframe');
+
+                var iframeDocument = $iframe[0].contentWindow.document;
+
+                iframeDocument.open('text/html', 'replace');
+                iframeDocument.write(scope.ngModel.body);
+                iframeDocument.close();
+            };
+            return {
+                restrict: 'EA',
+                scope: {
+                    ngModel: '=',
+                },
+                template: '<iframe frameborder="0" style="width: 100%; min-height: 600px"></iframe>',
+                link: linkFn
+            };
+        }); 
+        
+        /**
+         * Factory containing some utilities. 
+         */
+        app.factory('utilsFactory', [function(){
+            
+            var fac = {
+                /**
+                 * Method to format a date 
+                 * @param {String} isoDateString - the isoDateString 
+                 * @returns {String} - returns formatted date
+                 */
+                formatDate: function(isoDateString){
+
+                    var daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+                    var date = new Date(isoDateString),
+                        diff = (((new Date()).getTime() - date.getTime()) / 1000),
+                        day_diff = Math.floor(diff / 86400);
+
+                    if (isNaN(day_diff) || day_diff < 0)
+                        return;
+
+                    return day_diff === 0 && (
+                            // < 5 mins
+                            diff < 300 && "just now" ||
+                            // < 1 hour
+                            diff < 3600 && Math.floor(diff / 60) + " minutes ago" ||
+                            // same day
+                            diff < 7200 && "1 hour ago" ||
+                            diff < 86400 && Math.floor(diff / 3600) + " hours ago") ||
+                        // yesterday
+                        day_diff == 1 && "Yesterday" ||
+                        // < 7 days ago 
+                        day_diff < 7 && daysOfWeek[date.getDay()] ||
+                        // >= 7 days ago
+                        day_diff >= 7 && date.toLocaleDateString();
+                },
+                /**
+                 * Method to generate URL for a given asset Id 
+                 * @param {String} assetId - the assetId 
+                 * @returns {String} - returns formatted URL
+                 */                
+                formatAssetUrl: function(assetId){
+                    return donkyCore.formatAssetUrl(assetId);
+                }
+            };
+            
+            return fac;        
+        }]);
+
+    </script>
+  </body>
+
+</html>

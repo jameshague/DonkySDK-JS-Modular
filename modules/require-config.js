@@ -15,10 +15,9 @@ require.config({
 		"donkyUICommon": "modules/messaging/common/ui/donkyUICommon.min",
 		"donkyPushUI": "modules/messaging/simplePush/ui/donkyPushUI.min",
 		"donkyRichLogic": "modules/messaging/rich/logic/donkyRichLogic.min",
-        "donkyRichPopupUI": "modules/messaging/rich/ui/donkyRichPopupUI.min",
 		"donkyInboxContainerUI":  "modules/messaging/common/ui/donkyInboxContainerUI.min",
 		"donkyInboxEmbedUI":  "modules/messaging/common/ui/donkyInboxEmbedUI.min",
 		"donkyRichInboxUI":  "modules/messaging/rich/ui/donkyRichInboxUI.min",
-		"donkyChatInboxUI":  "modules/messaging/chat/ui/donkyChatInboxUI.min"				
+		"donkyAssets":  "modules/assets/donkyAssets.min",		
 	}
 });

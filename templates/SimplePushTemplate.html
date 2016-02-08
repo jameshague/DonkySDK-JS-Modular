@@ -13,15 +13,27 @@
             </div>
         </div>
     </div>
-        
     {{#Buttons.length}}    
-    <hr/>
-    <p>
-        <span class="buttonContainer">        
-            {{#Buttons}}
-            {{{ButtonHtml}}}
-            {{/Buttons}}        
-        </span>
-    </p>
-    {{/Buttons.length}} 
+        <div class='row buttonContainer'>
+            {{#Is1Button}}
+            <div class="col-xs-12">
+                {{{Buttons.0.ButtonHtml}}}
+            </div>        
+            {{/Is1Button}}        
+        
+            {{#Is2Button}}
+            <div class="col-xs-6">
+                {{{Buttons.0.ButtonHtml}}}
+            </div>        
+            <div class="col-xs-6">
+                {{{Buttons.1.ButtonHtml}}}            
+            </div>                    
+            {{/Is2Button}}        
+        </div>   
+    {{/Buttons.length}}      
+   
+    {{^Buttons.length}}    
+        <br/>
+    {{/Buttons.length}}         
+
 </div>

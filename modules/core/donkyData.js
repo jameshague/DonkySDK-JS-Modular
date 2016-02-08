@@ -93,6 +93,16 @@ var DonkyData = (function () {
             } catch (e) {
                 return false;
             }
+        },
+        /**
+         * Remove all donky values from local storage.
+         */
+        clearDonkyLocalStorage: function(){
+            for (var key in localStorage){
+                if(key.indexOf(defaults.namespace) === 0){
+                      localStorage.removeItem(key); 
+                }              
+            }            
         }
     };
 
@@ -189,7 +199,13 @@ var DonkyData = (function () {
          */
         remove: function (key) {
             _db.remove(key);
-        }
+        },
+        /**
+         * Remove all donky values from local storage.
+         */        
+        clearDonkyLocalStorage: function(){
+            _db.clearDonkyLocalStorage();
+        },
     };
 
 

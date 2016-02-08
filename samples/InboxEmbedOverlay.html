@@ -335,21 +335,15 @@
                            */
                           iFrameContainer: "donky-inbox",
                           /**
-                           * We only have a single view and we don't require an index page to be rendered
-                           */                 
-                          showIndexPage: false,
-                          /**
                            * We have overriden a few css rules to make the inbox look transparent and spaced out the list view a bit.
                            * Remove this property and it is vanilla ...
                            */ 
                           inboxCssOverrideUrls: ["https://cdn.dnky.co/sdk/latest-modular/samples/css/overlay.css"] 
                        };
                         
-                        // Initialise the donkyInboxContainerUI module - note that we pass in the donkyRichInboxUI module in an array.
-                        // The job of the container is to host various views - we are just supplying the rich inbox view. 
-                        // in this demo, we are passing in some config in the second parameter. Seeing that there is only a single view, 
-                        // an index page is unnecessary so we are telling the container not to display the index page
-                        donkyInboxEmbedUI.initialise([donkyRichInboxUI], options);						                        
+                        // Initialise the donkyInboxContainerUI module.
+                        // The job of the container is to host the rich inbox view. 
+                        donkyInboxEmbedUI.initialise(donkyRichInboxUI, options);						                        
                     }else{
                         alert( "initialise() failed: " + JSON.stringify(result) );
                     }

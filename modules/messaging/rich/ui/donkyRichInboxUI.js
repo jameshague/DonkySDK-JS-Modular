@@ -58,7 +58,20 @@
 			// Default avatar to use if app-space doesn't have one
 			defaultAvatar: donkyCore.installDir + "images/NoImage.png",
 			// Default message body for sharing  
-			defaultShareMessageContent: "Check out this message I received!!"
+			defaultShareMessageContent: "Check out this message I received!!",
+            // Boolean to control whether to display the new Rich Message popup if inbox ix in closed state (default is true)
+            showRichMessagePopup: true,
+            // The title for a new rich message notification - This is a Mustache template - {{SenderName}} can be used within the template.
+            // Note: the message body will be the rich message desacription. 
+            richMessagePopupTitle: "New: <em>{{SenderName}}</em>",
+            // The title for multiple new rich messages notification
+            richMessagesPopupTitle: "<em>{{Count}}</em> New Messages",
+            // The body for multiple new rich messages notification
+            richMessagesPopupBody: "You have received {{Count}} new messages. Would you like to view them now?",
+            // Button text for the dismiss button
+            richMessagePopupDismissText: "Dismiss",
+            // Button text for the view messgae button (clicking this button opens the inbox on the message)
+            richMessagePopupViewText: "View"            
 		};
 		
 		var templates = {};
@@ -99,64 +112,16 @@
 		        newWindow.focus();
 		    }
 		}
-		
-		/**
-		 * Return a collection of matched elements from either the current document of the optionally specified iframe
-         * @param {String} selector - the selector
-         * @returns {Object} - collection of matched elements
-		 */
-		function getElements(selector){
-			// Sanity check 			
-			if(defaults.iFrameId !== null && defaults.$iFrame === null){					
-				throw new Error("No iframe");
-			}
-								
-			if(defaults.$iFrame === null || defaults.$iFrame === undefined){
-				return jQuery(selector);				
-			}else{
-				return defaults.$iFrame.contents().find(selector);
-			}	
-		}
-		
-		/**
-		 * Render html from a mustache template into a container in either the current document or the optionally specified iframe
-		 * @param {String} template - the Mustache template
-		 * @param {Object} model - the Model
-		 * @param {String} containerId - the container id of the element to render the template into
-		 */
-		function renderHtml( template, model, containerId){			
-			getElements(containerId).html( Mustache.to_html(template, model) );
-		}
-
-		/**
-		 * Bind an event in either the current document or the optionally specified iframe
-		 * @param {String} event - the the event (click, etc ...)
-		 * @param {String} selector - the selector
-		 * @param {Callback} callback - the callback function to execute when the event fires
-		 */
-		function bindEvent( event, selector, callback){
-			getElements(selector).bind(event, callback);
-		}
-
-		/**
-		 * Unbind an event in either the current document or the optionally specified iframe
-		 * @param {String} event - the the event (click, etc ...)
-		 * @param {String} selector - the selector
-		 * @param {Callback} callback - the callback function to execute when the event fires
-		 */
-		function unbindEvent( event, selector){
-			getElements(selector).unbind( event );
-		}
-		
+						
 		/**
 		 * Function to hide the ExpiredMessagePopup and unbind the click handlers
 		 * @param {Callback} callback - callback to call when dialog has faded out
 		 */						
 		function hideModalExpiredMessagePopup(callback){								
-			unbindEvent('click', "#deleteAllExpiredRichMessages");
-			unbindEvent('click', "#DeleteExpiredRichMessage");				
-			getElements("#richInboxOverlay").fadeOut(100);
-			getElements("#richInboxExpiredMessagePopup").fadeOut(100,function(){callback();});
+			donkyUICommon.unbindEvent(defaults.$iFrame, 'click', "#deleteAllExpiredRichMessages");
+			donkyUICommon.unbindEvent(defaults.$iFrame, 'click', "#DeleteExpiredRichMessage");				
+			donkyUICommon.getElements(defaults.$iFrame, "#richInboxOverlay").fadeOut(100);
+			donkyUICommon.getElements(defaults.$iFrame, "#richInboxExpiredMessagePopup").fadeOut(100,function(){callback();});
 		}
 
 		/**
@@ -167,16 +132,16 @@
 		 */
 		function showModalExpiredMessagePopup(deleteAllCallback, deleteCallback){
 									
-			getElements("#richInboxOverlay").fadeIn(100);
-			getElements("#richInboxExpiredMessagePopup").fadeIn(100);
+			donkyUICommon.getElements(defaults.$iFrame, "#richInboxOverlay").fadeIn(100);
+			donkyUICommon.getElements(defaults.$iFrame, "#richInboxExpiredMessagePopup").fadeIn(100);
 			
-			bindEvent('click', "#deleteAllExpiredRichMessages", function(){				
+			donkyUICommon.bindEvent(defaults.$iFrame, 'click', "#deleteAllExpiredRichMessages", function(){				
 				hideModalExpiredMessagePopup(function(){
 					deleteAllCallback();	
 				});
 			});
 
-			bindEvent('click', "#DeleteExpiredRichMessage", function(){
+			donkyUICommon.bindEvent(defaults.$iFrame, 'click', "#DeleteExpiredRichMessage", function(){
 				hideModalExpiredMessagePopup(function(){
 					deleteCallback();		
 				});													
@@ -187,11 +152,11 @@
 		 * Internal function to show or hide the trashcan based on whether any messages have been selected
 		 */
 		function showHideTrashCan(){
-            var numChecked = getElements('#richInboxListContainer input[type=checkbox]:checked').length;
+            var numChecked = donkyUICommon.getElements(defaults.$iFrame, '#richInboxListContainer input[type=checkbox]:checked').length;
             if (numChecked > 0) {
-                getElements("#deleteSelectedRichMessages").fadeIn(100);
+                donkyUICommon.getElements(defaults.$iFrame, "#deleteSelectedRichMessages").fadeIn(100);
             } else {
-                getElements("#deleteSelectedRichMessages").fadeOut(100);
+                donkyUICommon.getElements(defaults.$iFrame, "#deleteSelectedRichMessages").fadeOut(100);
             }				
 		}
 		
@@ -224,24 +189,12 @@
 					Selected: selectedMessages[richMessage.messageId] === true
 	            });
 	        });
-												
-			var donkyInboxEmbedUIService = donkyCore.getService("donkyInboxEmbedUIService");
-			
-			var backButton = defaults.iFrameId !== null;
-						
-			if(donkyInboxEmbedUIService !== null){
-				if(!donkyInboxEmbedUIService.showIndexPage()){
-					backButton = false;
-				}
-			}			
-															
+																														
 			var model = { 
 				// Array of messages
 				Messages: messages, 
 				// The filter text to render back into the input field if redrawing the entire view
 				Filter: filter, 
-				// Whether to render a back button
-				BackButton: backButton,
 				// Whether we are in editmodel
 				EditMode: editMode				 
 			};
@@ -268,30 +221,30 @@
 		 */
 		function bindRichInboxViewEvents(){
 			// Toggle edit mode
-			bindEvent('click', '#toggleEditMode', function() {
+			donkyUICommon.bindEvent(defaults.$iFrame, 'click', '#toggleEditMode', function() {
 				
 				// Toggle editMode and show/hide the delete button ..
 				if(!editMode){						
 					showHideTrashCan();
-					getElements("#richInboxListContainer").addClass("editMode");
+					donkyUICommon.getElements(defaults.$iFrame, "#richInboxListContainer").addClass("editMode");
 					editMode = true;
 				}else{
-					getElements("#deleteSelectedRichMessages").fadeOut(100);
-					getElements("#richInboxListContainer").removeClass("editMode");
+					donkyUICommon.getElements(defaults.$iFrame, "#deleteSelectedRichMessages").fadeOut(100);
+					donkyUICommon.getElements(defaults.$iFrame, "#richInboxListContainer").removeClass("editMode");
 					editMode = false;	
 					// deselect all messages
-					getElements(".richMessage input[type=checkbox]").prop("checked", false);				
+					donkyUICommon.getElements(defaults.$iFrame, ".richMessage input[type=checkbox]").prop("checked", false);				
 				}
 			});
 							
 	        // user has selected some rich messages and clicked delete - show confirmation dialog and delete if necessary. Redraw at the end.
-	        bindEvent('click', '#deleteSelectedRichMessages', function() {
+	        donkyUICommon.bindEvent(defaults.$iFrame, 'click', '#deleteSelectedRichMessages', function() {
 	
-	            if (getElements(".richMessage input[type=checkbox]:checked").length > 0) {
+	            if (donkyUICommon.getElements(defaults.$iFrame, ".richMessage input[type=checkbox]:checked").length > 0) {
 
 					var deleteArray = [];
 					var $deleteArray = [];
-					getElements(".richMessage").each(function() {
+					donkyUICommon.getElements(defaults.$iFrame, ".richMessage").each(function() {
                         var $message = jQuery(this);
                         var $cb = $message.find("input[type=checkbox]");
                         if ($cb.is(":checked")) {
@@ -315,15 +268,10 @@
 					}					
 	            }
 	        });
-			
-	        // User has clicked a back button so go back to the homepage
-	        bindEvent('click', '.backToHomePage', function() {
-	            donkyCore.publishLocalEvent({ type : "backToHomePage", data: {} });
-	        });
-			
+						
 	        // User is applying a filter to rich inbox
 	        // We store the filter incase there is a page reload and redraw the inbox 
-	        bindEvent('keyup', '#richInboxFilter', function() {
+	        donkyUICommon.bindEvent(defaults.$iFrame, 'keyup', '#richInboxFilter', function() {
 	            var filter = jQuery(this).val();
 	            donkyCore.donkyData.set("DonkyRichInboxUIFilter", filter);
 				renderRichInbox(true);							                 
@@ -331,9 +279,9 @@
 			
 	        // User is resetting filter to  rich inbox
 	        // We store the filter incase there is a page reload and redraw the inbox 
-	        bindEvent('click', '#resetRichInboxFilter', function() {
+	        donkyUICommon.bindEvent(defaults.$iFrame, 'click', '#resetRichInboxFilter', function() {
 	            donkyCore.donkyData.remove("DonkyRichInboxUIFilter");
-				getElements("#richInboxFilter").val("");
+				donkyUICommon.getElements(defaults.$iFrame, "#richInboxFilter").val("");
 				renderRichInbox(true);							                 
 	        });
 			
@@ -344,7 +292,7 @@
 		 * These events need binding when we draw the list. 
 		 */
 		function bindRichInboxListEvents(){
-			bindEvent("click", ".richMessage", function(){
+			donkyUICommon.bindEvent(defaults.$iFrame, "click", ".richMessage", function(){
 	            var messageId = jQuery(this).data("message-id");
 					
 				if(!editMode){
@@ -383,14 +331,14 @@
 			});
 				
 	        // if you click the checkbox, dont drill down into the message
-	        bindEvent("click", '.richMessage .checkbox', function(e) {
+	        donkyUICommon.bindEvent(defaults.$iFrame, "click", '.richMessage .checkbox', function(e) {
 	            e.stopPropagation();
 	        });
 			
 	        // user has clicked a checkbox in the rich message list. This will cause a control menu to slide up or down from the bottom
 	        // of the screen containing "select all" and "delete" buttons. Similar issue with the div being fixed to the bottom of the 
 	        // screen and desktop / mobile views hence the width needing to be explicitly set. 
-	        bindEvent('click', '#richInboxListContainer input[type=checkbox]', function() {	     				
+	        donkyUICommon.bindEvent(defaults.$iFrame, 'click', '#richInboxListContainer input[type=checkbox]', function() {	     				
 				var $cb = jQuery(this);
 				// the checkbox has an id the same as the messageId
 				saveMessageSelectedState($cb.attr('id'), $cb.is(":checked"));								                       
@@ -422,11 +370,11 @@
 				
 				if (!messagesOnly) {
 					// Render the entireview for this screen								
-					renderHtml(templates.richInboxTemplate, model, defaults.containerId);
+					donkyUICommon.renderHtml(defaults.$iFrame, templates.richInboxTemplate, model, defaults.containerId);
 				}
 				
 				// just render the list of messages (filter has changed etc ...)
-				renderHtml(templates.richInboxListTemplate, model, "#richInboxListContainer");
+				donkyUICommon.renderHtml(defaults.$iFrame, templates.richInboxListTemplate, model, "#richInboxListContainer");
 				
 				bindRichInboxListEvents();			
 										
@@ -470,35 +418,35 @@
 					ShareMessage: defaults.defaultShareMessageContent
 				};
 				
-				renderHtml(templates.richMessageTemplate, model, defaults.containerId);
+				donkyUICommon.renderHtml(defaults.$iFrame, templates.richMessageTemplate, model, defaults.containerId);
 				
-				donkyUICommon.renderIframeSrcDoc( getElements("#richMessage"), !isExpired ? message.body : message.expiredBody, function(){
+				donkyUICommon.renderIframeSrcDoc( donkyUICommon.getElements(defaults.$iFrame, "#richMessage"), !isExpired ? message.body : message.expiredBody, function(){
 					// onLoad Callback - not using atm ... 
 				});
 	
-				bindEvent("click", ".backToRichInbox", function() {
+				donkyUICommon.bindEvent(defaults.$iFrame, "click", ".backToRichInbox", function() {
 					renderRichInbox(false);
 				});
 				
 				// User has clicked delete icon on the currently viewed rich message. Similar logic as above.
-				bindEvent('click', '.deleteRichMessage', function() {
+				donkyUICommon.bindEvent(defaults.$iFrame, 'click', '.deleteRichMessage', function() {
 					var messageId = jQuery(this).data("message-id");
 					donkyRichLogic.deleteRichMessage(messageId);
 					renderRichInbox(false);
 				});
 				
 				// User has clicked share icon on the currently viewed rich message. Similar logic as above.
-				bindEvent('click', '.shareRichMessage', function() {
-					getElements("#richMessageControls").slideDown();
+				donkyUICommon.bindEvent(defaults.$iFrame, 'click', '.shareRichMessage', function() {
+					donkyUICommon.getElements(defaults.$iFrame, "#richMessageControls").slideDown();
 				});
 	
 				// User has clicked close button on the share panel - close it
-				bindEvent('click', '#richMessageControlsClose', function() {
-					getElements("#richMessageControls").slideUp();
+				donkyUICommon.bindEvent(defaults.$iFrame, 'click', '#richMessageControlsClose', function() {
+					donkyUICommon.getElements(defaults.$iFrame, "#richMessageControls").slideUp();
 				});
 							
 				// User has clicked one of the share icons - tell donky about it
-				bindEvent('click', '.share-icon', function(event) {
+				donkyUICommon.bindEvent(defaults.$iFrame, 'click', '.share-icon', function(event) {
 					
 					var shareUrl = jQuery(this).attr("href");
 					
@@ -535,7 +483,6 @@
 	    function loadTemplates( callback ) {
 	        jQuery.get(defaults.templateURL, function(response) {
 	
-				templates.richInboxMenuItemTemplate = jQuery(response).filter('#richInboxMenuItemTemplate').html(); 
 	            templates.richInboxTemplate = jQuery(response).filter('#richInboxTemplate').html();
 	            templates.richInboxListTemplate = jQuery(response).filter('#richInboxListTemplate').html();
 	            templates.richMessageTemplate = jQuery(response).filter('#richMessageTemplate').html();
@@ -555,23 +502,23 @@
 			// safari doesn't respect the width:inherit rule on the top panel when the parent width dynamically changes
 			// HACK: just set it 
 			if(defaults.iFrameId !== null){
-				var bodyWidth = getElements("body").width();			
-				getElements(".panel.donkyInboxUI").css("width", bodyWidth + "px");				
+				var bodyWidth = donkyUICommon.getElements(defaults.$iFrame, defaults.containerId).width();			
+				donkyUICommon.getElements(defaults.$iFrame, ".panel.donkyInboxUI").css("width", bodyWidth + "px");				
 			}																		
 												
 			switch( viewState.view )
 			{
 				case donkyUICommon.inboxViews.richInbox:					
-					panelHeadingHeight = getElements(".panel-heading").outerHeight();
-					filterHeight = getElements(".search-wrapper").outerHeight();					 				
+					panelHeadingHeight = donkyUICommon.getElements(defaults.$iFrame, ".panel-heading").outerHeight();
+					filterHeight = donkyUICommon.getElements(defaults.$iFrame, ".search-wrapper").outerHeight();					 				
 					var listHeight = (viewPortHeight - (panelHeadingHeight + filterHeight)) + "px";
-					getElements("#richInboxListContainer").css("height", listHeight);
+					donkyUICommon.getElements(defaults.$iFrame, "#richInboxListContainer").css("height", listHeight);
 				break;
 				
 				case donkyUICommon.inboxViews.richMessage:									
-					panelHeadingHeight = getElements(".panel-heading").outerHeight();
+					panelHeadingHeight = donkyUICommon.getElements(defaults.$iFrame, ".panel-heading").outerHeight();
 					var mesageHeight = (viewPortHeight - panelHeadingHeight) + "px";					
-					getElements("#richMessageContainer").css("height", mesageHeight);				
+					donkyUICommon.getElements(defaults.$iFrame, "#richMessageContainer").css("height", mesageHeight);				
 				break;	
 				
 				default:
@@ -592,7 +539,7 @@
 			
 				var now = new Date();
 	
-				getElements("#richInboxListContainer .richMessage").each(function(){
+				donkyUICommon.getElements(defaults.$iFrame, "#richInboxListContainer .richMessage").each(function(){
 					
 					var $richMessage = jQuery(this);
 					
@@ -718,7 +665,57 @@
 							if(donkyCore._isFunction(donkyAudio.playSound)){
 								donkyAudio.playSound(donkyMessagingCommon.messageTypes.rich);
 							}
-						}
+						}       
+                        
+                        if(defaults.showRichMessagePopup){
+                            // we need the container service ...
+                            var containerService = donkyCore.getService("donkyInboxContainerUIService");
+                            // inbox must be closed too ...
+                             if (containerService !== null && !containerService.isOpen()){
+
+                                var donkyPushLogic = donkyCore.getService("donkyPushLogic");
+                                
+                                if(donkyPushLogic !== null){
+
+                                    var messages = event.data;
+
+                                    var silent = true;
+
+                                    donkyCore._each(messages, function(index, message){
+                                        if(!message.silentNotification){
+                                            silent = false;
+                                        }
+                                    });
+
+                                    if(!silent){
+                                        if(messages.length === 1){
+
+                                            donkyPushLogic.queueCustomPopup(
+                                                            "newRichMessages", 
+                                                            Mustache.to_html(defaults.richMessagePopupTitle, {SenderName: messages[0].senderDisplayName}),
+                                                            messages[0].description,
+                                                            donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0]), 
+                                                            null,
+                                                            "jQuery(document).trigger('ViewRichMessage', ['" + messages[0].messageId + "']);", 
+                                                            defaults.richMessagePopupDismissText, 
+                                                            defaults.richMessagePopupViewText);
+                                        }else{
+
+                                            donkyPushLogic.queueCustomPopup(
+                                                            "newRichMessages", 
+                                                            Mustache.to_html(defaults.richMessagesPopupTitle, {Count: messages.length}),
+                                                            Mustache.to_html(defaults.richMessagesPopupBody, {Count: messages.length}),
+                                                            donkyRichLogic.getRichMessageExpiryTimeStamp(messages[0]),                                            
+                                                            null,
+                                                            "jQuery(document).trigger('ViewRichInbox');", 
+                                                            defaults.richMessagePopupDismissText, 
+                                                            defaults.richMessagePopupViewText );
+                                        }
+                                    }                                                    
+                                }
+                             }
+                        }                            
+                                  
 		            });
 															
 					jQuery(document).on("ViewRichMessage",function(evt, messageId) {
@@ -806,13 +803,6 @@
 					renderViewWhenInitialised = true;
 				}
             },
-            /**
-             * Container calls this to determine what to render in the index list for this view.
-			 * If clicked, renderView will be called on this object
-             */			
-			getContainerIndexMarkup : function(){
-				return Mustache.to_html(templates.richInboxMenuItemTemplate, donkyRichLogic.getMessageCount());
-			},
             /**
              * Container calls this to determine what to render in the handle badge.
              */			

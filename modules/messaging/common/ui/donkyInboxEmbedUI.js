@@ -6,14 +6,10 @@
  */
 
 (function () {
-	var factory = function (donkyCore, donkyRichLogic, donkyUICommon, Mustache) {
+	var factory = function (donkyCore, donkyUICommon, Mustache) {
 
 	    if (donkyCore === undefined) {
 	        throw new Error("Missing donkyCore");
-	    }
-
-	    if (donkyRichLogic === undefined) {
-	        throw new Error("Missing donkyPushLogic");
 	    }
 
 	    if (donkyUICommon === undefined) {
@@ -46,17 +42,12 @@
 			iFrameContainer: null,			
 			// The id of the inbox container iframe
 			iFrameId: "donkyInboxUIContainer",
-	        // Location of moustache tamplates for all the views
-	        templateURL: donkyCore.installDir + "templates/InboxEmbedTemplate.html",
-			// If only one view in container, whether or not to display index page 
-			showIndexPage: true							
 		};
 		
 		var templates = {};
 		
-		var views = null;
+		var inboxView = null;
 		
-		var viewIndex = -1;
 		
 		// Helpers -----------
 		//====================
@@ -106,44 +97,6 @@
 					
 			return iframeSrc;		
 		}
-		
-		
-		/**
-		 * This method renders the container index page. This contains a list item for each child view. 
-		 * The markup is supplied by the child with a call to getContainerIndexMarkup(). 
-		 * This could include a badge count of unread messages in the case of the Rich & Chat Inbox views.
-		 */
-		function renderHomePage(){
-			
-			// Build the model for the Mustache template ..
-			var model = {	
-				Views:[]
-			};
-			
-			donkyCore._each(views, function(index,view){
-				model.Views.push({ 
-					MenuHtml: view.getContainerIndexMarkup(),
-					Index: index
-				});
-			});
-			
-			// render the template
-			defaults.$iFrame.contents().find("body").html( Mustache.to_html(templates.homePageTemplate, model));
-
-			// Set viewstate so we can redraw correctly is page is refreshed (inbox state, current view etc ... )			
-			donkyUICommon.setInboxViewState({view: donkyUICommon.inboxViews.homePage});
-			donkyCore.donkyData.set("InboxContainerView", {index: -1 } );
-
-			
-			// Setup handlers to navigate into a child view if menuitem is clicked
-			defaults.$iFrame.contents().find(".list-group-item").click(function(){
-				viewIndex = jQuery(this).data("view-index");
-				donkyCore.donkyData.set("InboxContainerView", { index: viewIndex } );
-				donkyUICommon.setInboxViewState(null);
-				views[viewIndex].renderView();						
-			});			
-		}
-
 				
 		// donkyInboxEmbedUI
 		//======================
@@ -161,15 +114,6 @@
 
             donkyCore.registerModule(module);	
 			
-			var showIndexPageService = {
-				showIndexPage: function(){
-					return defaults.showIndexPage;
-				}				
-			};  		
-			
-			
-			donkyCore.registerService("donkyInboxEmbedUIService", showIndexPageService);			
-			
 		}
 
         /**
@@ -179,21 +123,24 @@
 
             /**
              * Function to initialize plugin
+			 * @param {Object}  inbox - inbox view to host 
 			 * @param {Object} settings - intergrators settings to optionally overide any of the defaults 
-			 * @param {Object[]} children - array of child views to insert into index page 
              */
-			initialise: function(children, settings){
+			initialise: function(inbox, settings){
 				
-				if(!donkyCore._isArray(children)){
-					throw new Error("No views");
-				}
+				if(donkyCore._isArray(inbox)){
+                    // backwards compatibility ;-(                    
+                    inboxView = inbox[0];
+				}else if(donkyCore._isObject(inbox)){
+                    inboxView = inbox;
+                }else{
+                    throw new Error("No views");
+                }
 				
 				if(settings !== undefined){
 					donkyCore._extend(defaults, settings);	
 				}
-																																																								
-				var viewState = donkyCore.donkyData.get("InboxContainerView");
-																								
+				
 				if(defaults.iFrameContainer !== null){
 					
 					var $iFrameContainer = jQuery("#" + defaults.iFrameContainer);
@@ -213,9 +160,7 @@
 				}else{
 					throw new Error("No container specified");
 				}		
-																																						
-				views = children;
-				
+			
 				// Load mustache templates for the views																		
 				loadTemplates(function(){
 																
@@ -234,32 +179,14 @@
 						// explicitly set the width so when we animate the opening and closing of the container the layout doesn't go responsive
 						defaults.$iFrame.contents().find("body").css("width", defaults.$iFrame.width() + "px");
 						
-						jQuery(window).on("resize orientationchange",function(){
-							var width = defaults.$iFrame.width();
-							defaults.$iFrame.contents().find("body").css("width", width + "px");
-							// safari doesn't respect the width:inherit rule on the top panel when the parent width dynamically changes
-							// HACK: just set it 
-							defaults.$iFrame.contents().find(".panel.donkyInboxUI").css("width", width + "px");
+						jQuery(window).on("resize orientationchange",function(event){
+                            var width = defaults.$iFrame.width();
+                            defaults.$iFrame.contents().find("body").css("width", width + "px");
+                            defaults.$iFrame.contents().find(".panel.donkyInboxUI").css("width", width + "px");
 						});									
 																											
 						donkyInboxEmbedUI.renderView();
-						
-						// Back button functionality when inside a child view is decoupled. Using local events to trigger this behaviour.
-						donkyCore.subscribeToLocalEvent("backToHomePage", function(event) {
-							if(defaults.showIndexPage){
-								renderHomePage();	
-							}							
-						});	
-																	
-						// New rich message received 
-						donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event) {
-							
-							var viewState = donkyUICommon.getInboxViewState();
-							// 2) if on homePageTemplate view, refresh (update unread info on menus)
-							if(viewState !== null && viewState.view === donkyUICommon.inboxViews.homePage){
-								donkyInboxEmbedUI.renderView();
-							}
-						});											
+																							
 					});					
 				});
 																					
@@ -272,27 +199,8 @@
 								
 				donkyCore.donkyLogging.infoLog("DonkyInboxEmbedUI.renderView()");
 				defaults.$iFrame.contents().find("body").css("width", defaults.$iFrame.width() + "px");
-				// If we just have a single view we can skip displaying the index and just render the child view. 
-				// This gives us the ability to use the iframe container
-				if(views.length == 1 && !defaults.showIndexPage){					
-					views[0].renderView();
-				}else{
-					// What view are we currently displaying?
-					var viewState = donkyCore.donkyData.get("InboxContainerView");
-					
-					if(viewState !== null && viewState.index  !== -1){
-						// We need to render this view						
-						if(viewState.index < views.length ){
-							views[viewState.index].renderView();	
-						}else{
-							// this won't happen in real world.
-							views[0].renderView();
-						}																
-					}else{
-						// We need to render this index page
-						renderHomePage();					
-					}					
-				}				
+
+                inboxView.renderView();
             }
 		};
 
@@ -304,11 +212,11 @@
 
 	// Require.js initialisation
 	if (typeof define === 'function' && define.amd) {
-		define('donkyInboxEmbedUI', ['donkyCore', 'donkyRichLogic', 'donkyUICommon', 'Mustache' ], function(donkyCore, donkyRichLogic, donkyUICommon, Mustache) { 
-            return factory(donkyCore, donkyRichLogic, donkyUICommon, Mustache); 
+		define('donkyInboxEmbedUI', ['donkyCore', 'donkyUICommon', 'Mustache' ], function(donkyCore, donkyUICommon, Mustache) { 
+            return factory(donkyCore, donkyUICommon, Mustache); 
         });
 	} else {
-		window.donkyInboxEmbedUI = factory(window.donkyCore, window.donkyRichLogic, window.donkyUICommon, window.Mustache);
+		window.donkyInboxEmbedUI = factory(window.donkyCore, window.donkyUICommon, window.Mustache);
 	}
 
 }());

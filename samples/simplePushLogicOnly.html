@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge' />
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <title>Simple Push</title>
+    <script src="https://code.jquery.com/jquery-1.11.2.min.js"></script>
+    <script>
+        $.noConflict();
+        // Code that uses other library's $ can follow here.
+    </script>          
+    
+    <!-- This demo is using bootstrap, so pull it in from a CDN ... -->
+    <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mustache.js/0.8.1/mustache.min.js"></script>                               
+    <script src="https://cdn.dnky.co/sdk/latest-modular/dependencies/jquery.signalR-2.2.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.17/require.min.js"></script>
+    <!-- TODO: needs to point to CDN after release - missing getInteractiveButtons() method on currnt version ...--> 
+    <script src="https://cdn.dnky.co/sdk/latest-modular/modules/require-config-debug.js"></script>
+    <style>
+    .modal-header, h4, .close {
+        background-color: #5cb85c;
+        color:white !important;
+        font-size: 30px;
+    }
+    .modal-footer {
+        background-color: #f9f9f9;
+    }
+    </style>    
+</head>
+<body>
+    
+    <div class="container">
+        <div class="page-header">
+            <h2>Modal Simple Push Example</h2>
+        </div>
+        
+        <div id="logPanel"></div>
+
+        <!-- Moustache template to render a push message in a modal popup -->
+        <script id="messageTpl" type="text/template">
+            <!-- Modal content-->
+            <div class="modal-content" >
+    
+                <div class="modal-header" style="padding:35px 50px;">
+                    <button type="button" class="close" data-dismiss="modal" data-message-id="{{messageId}}">&times;</button>
+                    <h4 id="title">{{title}}</h4>
+                </div>
+        
+                <div class="modal-body" style="padding:40px 50px;">
+                    <div class="row">
+                        <div class="col-xs-4">
+                            <img src="{{avatarUrl}}" class="img-circle" id="avatar">
+                        </div>                    
+                        <div class="col-xs-8">
+                            <p id="body">{{body}}</p>
+                        </div>                    
+                    </div>
+                </div>
+                <div class="modal-footer" id="buttons"> 
+                    {{#buttons}}
+                        <button class='btn btn-default' data-action-type='{{actionType}}' data-link-url='{{linkURL}}' data-dismiss='modal' data-message-id="{{messageId}}">{{buttonText}}</button>
+                    {{/buttons}}
+                </div>
+            </div>
+        </script>
+
+        <!-- Modal to display the push message-->
+        <div class="modal fade" id="myModal" role="dialog">
+            <div class="modal-dialog" id="pushMessageModal"></div>
+        </div> 
+        
+    </div>
+    <script>
+    jQuery(function() {
+      // Handler for .ready() called.
+
+        // create jQuery object for logPanel and cache it 
+        var $logPanel = jQuery("#logPanel");
+        // function to perform logging
+        function log(message) {
+            $logPanel.append("<pre>" + message + "</pre>");
+        }
+
+        // get the donky interfaces we need for this demo ...
+        require(['donkyPushLogic', 'donkyCore', 'donkyCoreAnalytics'], function(donkyPushLogic, donkyCore, donkyCoreAnalytics) {
+
+            // boolean showing modal state (if a push arrives when we are already displaying another, we dont want to do anything)
+            // you can see this being updated below when the "hidden.bs.modal" and "shown.bs.modal" events occurr.
+            var modalActive = false;
+            // Bootstrap modal dialog to display the push notification ...
+            // http://getbootstrap.com/javascript/#modals
+            var $modal = jQuery("#myModal").modal({
+                show: false,        // don't initially display the dialog
+                backdrop: "static"  // don't allow clicks to the body to dismiss the popup 
+            })
+            .on('shown.bs.modal', function (e) {
+                modalActive = true; 
+            }).on('hidden.bs.modal', function (e) {
+                modalActive = false;
+                
+                // anything else to display ?
+                var message = donkyPushLogic.getNextSimplePush();
+                
+                if(message !== null){
+                    showPushMessage(message);
+                }                       
+            });
+
+            // cache the template            
+            var messageTemplate = jQuery('#messageTpl').html();
+           
+            /** 
+             * Handle the button clicks ....             
+             */
+            jQuery( "#myModal" ).on( "click", "button", function() {
+                var $this = jQuery( this );
+                
+                // get the data from the button that was clicked ...
+                var actionType = $this.data("action-type");
+                var linkUrl = $this.data("link-url");
+                var text = $this.text();
+                var id = $this.data("message-id");                 
+                
+                // send the result back to donky (this is used for analytical puroposes)
+                // the message will get deleted as part of this
+                donkyPushLogic.setSimplePushResult(id, text !== "×" ? text : "");
+                                
+                // perform the associated action if it is a link                
+                if(actionType === "Link" && linkUrl !== ""){                            
+                    window.open(linkUrl);
+                }                
+            });            
+
+            /**
+             * Function to display a push message. 
+             */
+            function showPushMessage(message){
+               
+                // create a model for the Moustache template ...                 
+                var model = {
+                    title: message.data.senderDisplayName,
+                    body: message.data.body,
+                    avatarUrl: donkyCore.formatAssetUrl(message.data.avatarAssetId),
+                    messageId: message.id,
+                    buttons: donkyPushLogic.getInteractiveButtons(message)                    
+                };
+                
+                // render template  ..                
+                jQuery("#pushMessageModal").html(Mustache.to_html(messageTemplate, model) );
+                // show the modal ...
+                $modal.modal('show');
+            }
+
+            // subscribe to new messages
+            donkyCore.subscribeToLocalEvent( "NewSimplePushMessagesReceived", function(){
+                // only display if modal is inactive
+                if(modalActive === false){
+                    var message = donkyPushLogic.getNextSimplePush();
+                    showPushMessage(message);
+                }
+            });
+
+            // initialise donky ...
+            donkyCore.initialise({
+                apiKey: ">>ENTER API KEY HERE<<",
+                resultHandler: function(result) {
+
+                    if(result.succeeded) {
+                        var registrationDetails = donkyCore.donkyAccount.getRegistrationDetails();
+
+                        log("Send push message to the following user: \"" + registrationDetails.userDetails.id + "\"");
+
+                        // Is there one to show on page load ?
+                        var message = donkyPushLogic.getNextSimplePush();
+                        
+                        if(message !== null){
+                            showPushMessage(message);
+                        }
+
+                    }else{
+                        // Failure - log out the result object as it will contain an error message
+                        log(JSON.stringify(result, null, 4));
+    				}
+                }
+            });
+        });
+    });
+
+    </script>
+</body>
+</html>

@@ -17,7 +17,7 @@
 	    }
 
 
-		var donkyRichLogic;
+		var _instance;
 
         var defaults = { 
           richMessageAvailabilityDays : 30          
@@ -452,7 +452,7 @@
                     return filtered;
 
 		        }catch(e){
-			        donkyCore.donkyLogging.errorLog("caught exception in filterChatConversations() : " + e );
+			        donkyCore.donkyLogging.errorLog("caught exception in filterRichMessages() : " + e );
                     return null;
                 }
             },
@@ -485,7 +485,7 @@
                     }
 
 		        }catch(e){
-			        donkyCore.donkyLogging.errorLog( "caught exception in markChatMessageRead() : " + e );
+			        donkyCore.donkyLogging.errorLog( "caught exception in markRichMessageRead() : " + e );
 		        }        
             },
 	        /**
@@ -556,12 +556,12 @@
 		};
 
 		// "static" instance
-		donkyRichLogic = new DonkyRichLogic();
+		_instance = new DonkyRichLogic();
         
         // make this available to other modules via the service mechanism
-        donkyCore.registerService("donkyRichLogic", donkyRichLogic);
+        donkyCore.registerService("donkyRichLogic", _instance);
 
-		return donkyRichLogic;
+		return _instance;
 	};
 
 	if (typeof define === 'function' && define.amd) {

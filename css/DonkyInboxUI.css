@@ -1,4 +1,13 @@
 
+input[type='text'],
+input[type='number'],
+textarea,
+input[type='text']:focus,
+input[type='number']:focus,
+textarea {
+  font-size: 16px !important;
+}
+
  .shadow{
 	-webkit-box-shadow: 0px 0px 10px 0px #888;
 	-moz-box-shadow: 0px 0px 10px 0px #888;
@@ -42,21 +51,6 @@
 	cursor:pointer;
  }
  
-.donkyInboxUI .donkyContainerIndex .donkyContainerIndexBadge{
-	
-}
-
-.donkyInboxUI .donkyContainerIndex .donkyContainerIndexName{
-	font-size: 16px;
-	font-weight: bold;
-	position: relative;
-	top: 6px;	
-}
-
-.donkyInboxUI .donkyContainerIndex .donkyContainerIndexButton{
-	color: black;
-}
- 
  
  .donkyInboxUI .list-group{
 	 background-color: transparent !important;
@@ -94,7 +88,6 @@
 	width:80px;
 	height:80px;
  }
-
 
 .donkyInboxUI .newRichMessageBadgeContainer{
 	position: absolute;
@@ -220,12 +213,10 @@
 
 .donkyInboxUI .search-wrapper input[type=text]{
 	padding-left:30px;
-}
-
-.donkyInboxUI input[type=text]{
 	display:inline-block;
 	border-radius: 30px;
 }
+
 
 #resetRichInboxFilter{cursor:pointer;}
 
@@ -339,10 +330,6 @@
 
 .donkyInboxUI .panel-heading .btn{padding: 6px 6px;}
 
-/* For narrow mobile devices nee to drop the size as it wont fit */
-@media (max-width: 320px) {
-	.donkyInboxUI .panel-heading .fa{font-size:15px;}	
-}
 
 .donkyInboxUI .panel-title{
 	line-height: 34px;
