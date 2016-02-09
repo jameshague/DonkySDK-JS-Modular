@@ -481,7 +481,6 @@
                             }]
                         }];
                 }
-                
 
                 processPushMessages([dummy]); 
             }            

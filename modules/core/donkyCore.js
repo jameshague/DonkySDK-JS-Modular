@@ -1424,7 +1424,7 @@ var DonkyCore = (function() {
  *  @returns {Object}
  */    
     DonkyCore.prototype.version = function() {
-        return "2.2.2.0";
+        return "2.2.2.1";
     };
     
     /** 

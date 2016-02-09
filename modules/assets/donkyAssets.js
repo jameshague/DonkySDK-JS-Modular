@@ -159,8 +159,6 @@
 
 		}
 
-
-
 		/**
 		 * Function to upload an asset and get the returned {@link DonkyAsset} via the supplied callback
 		 * @param {File} file - the file to upload (https://developer.mozilla.org/en-US/docs/Web/API/File)
@@ -168,8 +166,6 @@
 		 * @param {callback} callback - the callback to return the assetId
 		 */
 		function uploadAsset(file, assetType, callback){
-	        var environment = donkyCore.donkyData.get("environment");
-	        var scheme = donkyCore.donkyData.get("scheme");
 
 			var asset = {
 				name: file.name,

@@ -70,7 +70,7 @@ var DonkyAccount = (function () {
 
                     var userDetails = _instance.getRegistrationDetails().userDetails;
 
-                    userDetails.id = notification.data.externalUserId;
+                    userDetails.id = notification.data.newExternalUserId !== undefined ? notification.data.newExternalUserId : notification.data.externalUserId;
                     userDetails.displayName = notification.data.displayName;
                     userDetails.firstName = notification.data.firstName;
                     userDetails.lastName = notification.data.lastName;
