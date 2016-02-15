@@ -174,7 +174,7 @@
         /**
          * Factory encapsulating the rich logic API. 
          */
-        app.factory('richMessagesFactory', [ '$timeout',  function( $timeout ){
+        app.factory('richMessagesFactory', [ '$rootScope',  function( $rootScope ){
             
             var fac = {
                 /**
@@ -213,15 +213,14 @@
 
                 var messages = event.data;
 
-                // wrap the modification of the messages array in a timeout as we can't call $scope.$apply() in a factory.
-                // Angular won't know the array has beenupdated otherwise ...
-                $timeout(function() {
+                $rootScope.$apply(function() {
+                    
                     donkyCore._each(messages, function(index, message) {
                         fac.messages.unshift(message);
                     });
                     
                     fac.unreadCount = donkyRichLogic.getMessageCount().unreadRichMessageCount;
-                }, 0);
+                });
             });
                        
             /**
@@ -229,10 +228,11 @@
              */
             donkyCore.subscribeToLocalEvent("RegistrationChanged", function(event) {
                 // Angular won't know the array has beenupdated otherwise ...
-                $timeout(function() {
+                $rootScope.$apply(function() {
+                    
                     fac.messages = [];
                     fac.unreadCount = 0;
-                }, 0);
+                });
             });            
                         
             return fac;
