@@ -83,20 +83,22 @@ var DonkyNetwork = (function() {
  */    
     function _checkSynchronise() {
 
-        if (donkyCore.donkyAccount.isRegistered() && !donkyCore.donkyAccount._isSuspended()) {
-            var lastSynchroniseMs = donkyCore.donkyData.get("lastSynchroniseTime");
+        if(!donkyCore.donkyAccount._isRefreshingToken()){
+            if (donkyCore.donkyAccount.isRegistered() && !donkyCore.donkyAccount._isSuspended()) {
+                var lastSynchroniseMs = donkyCore.donkyData.get("lastSynchroniseTime");
 
-            if (lastSynchroniseMs !== null) {
-                var lastSynchronizeDate = new Date(lastSynchroniseMs);
+                if (lastSynchroniseMs !== null) {
+                    var lastSynchronizeDate = new Date(lastSynchroniseMs);
 
-                var diff = donkyCore._dateDiff(lastSynchronizeDate, new Date());
+                    var diff = donkyCore._dateDiff(lastSynchronizeDate, new Date());
 
-                if (diff.seconds > defaults.maxSecondsWithoutSynchronize) {
+                    if (diff.seconds > defaults.maxSecondsWithoutSynchronize) {
+                        _instance.synchronise();
+                    }
+                } else {
                     _instance.synchronise();
                 }
-            } else {
-                _instance.synchronise();
-            }
+            }            
         }
     }
 
@@ -261,12 +263,16 @@ var DonkyNetwork = (function() {
                                 // A 401 indicates that the token is invalid if the method is NOT "authentication/gettoken".
                                 if (method !== "authentication/gettoken") {
                                     retry = false;
-                                    // need to refresh the token and retry
-                                    donkyCore.donkyAccount._refreshToken(function(getTokenRslt) {
+                                    
+                                    var fnRefreshToken = donkyCore.donkyData.get("usingAuth") === true ? donkyCore.donkyAccount._refreshTokenWithAuth : donkyCore.donkyAccount._refreshToken; 
+                                    
+                                    fnRefreshToken(function(getTokenRslt){
                                         if (getTokenRslt.succeeded) {
                                             donkyCore.donkyLogging.debugLog("Retrying ajax call after getting a new token");
                                             _instance.ajax(request, type, api, method, callback);
-                                        }
+                                        }else{
+                                            donkyCore.donkyLogging.warnLog("Failed to refresh token (not retrying ajax call)");
+                                        }                                        
                                     });
 
                                 } else {

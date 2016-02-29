@@ -150,7 +150,6 @@ a.donkyBannerButton{
 }
 
 .btn:hover, .btn:focus, .btn:active{
-    color: #fff;
+    color: #17688C;
     text-decoration: none;
-    background-color: #A7A9AC;
 }

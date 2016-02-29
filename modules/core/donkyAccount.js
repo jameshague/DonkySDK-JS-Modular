@@ -23,6 +23,14 @@ var DonkyAccount = (function () {
     // Boolean to guard against repeated calls to update  
     var updatingDetails = false;
 
+
+    var _onAuthenticationChallenge;
+    
+    var _refreshingToken = false;
+    
+    var _registering = false;
+        
+
     /**
      * Creates donkyAccount object.
      * @class DonkyAccount
@@ -166,8 +174,18 @@ var DonkyAccount = (function () {
 
             var refresh = _instance._isTokenExpired();
 
-            if (refresh) {
-                this._refreshToken(callback);
+            if (refresh && !_refreshingToken) {
+                
+                if(donkyCore.donkyData.get("usingAuth") === true){
+                    /**
+                     * Need access to onAuthenticationChallenge which was passed into authenticatedInitialise() method ...
+                     *  
+                     */
+                    this._refreshTokenWithAuth(callback);                                        
+                }else{
+                    this._refreshToken(callback);                    
+                }
+                
             } else {
                 callback({ succeeded: true });
             }
@@ -175,6 +193,127 @@ var DonkyAccount = (function () {
         } else {
             callback({ succeeded: false });
         }
+    };
+
+    /**
+     * Get a new auth token via REST api using the auth flow ...
+     *
+     * @param {Callback} callback - function to call after asynchronous call returns
+     */
+    DonkyAccount.prototype._refreshTokenWithAuth = function(callback){
+        if (!donkyCore._isFunction(callback)) {
+            throw new Error("resultHandler not supplied");
+        }
+                
+        if(_refreshingToken === true){
+            callback({ succeeded: false });
+            return;
+        }
+        
+        _refreshingToken = true;
+        // TODO: if signal is stopped this wont restart
+        // currently if this fails it will keep retrying and the second time in signalr wont retart ...        
+        var restart = true;
+
+        var signalrState = donkyCore.donkyNetwork._getSignalRState();
+
+        switch (signalrState) {
+            case donkyCore.donkyNetwork.signalrStatuses.initializing:
+            case donkyCore.donkyNetwork.signalrStatuses.starting:
+            case donkyCore.donkyNetwork.signalrStatuses.started:
+                donkyCore.donkyNetwork._stopSignalR();
+                //restart = true;
+                break;
+            default:
+                break;
+        }
+        
+        // get nonce and correlationId from Donky Network
+        _authenticationStart(function(result){
+        
+            if(result.succeeded){
+
+                var correlationId = result.response.authenticationId;
+                
+                var userDetails = donkyCore.donkyData.get("userDetails");
+                          
+                var options = {
+                    nonce: result.response.nonceRequired ? result.response.nonce : undefined,
+                    expectedUserId: userDetails !== null ? userDetails.id : undefined
+                };
+                                                           
+                // get token (JWT) from Integrator          
+                _instance.onAuthenticationChallenge(options, function(token){            
+                                                    
+                    var request = {
+                        authenticationDetail: {
+                            provider: "JsonWebToken",
+                            token: token,
+                            authenticationId: correlationId                            
+                        },
+                        "networkId": donkyCore.donkyData.get("networkId"),
+                        "deviceSecret": donkyCore.donkyData.get("secret"),
+                        "operatingSystem": "Web",
+                        "sdkVersion": donkyCore.version()
+                    };                        
+                                        
+                    _reauthenticate(request, function(result){                
+                        // save this, start signalr, etc ...
+                            console.log(JSON.stringify(result, null, 4)); 
+                            
+                            if (result.succeeded) {
+                                donkyCore.donkyLogging.debugLog("Succesfully refreshed authorization token");
+                                
+                                // server config returned with token
+                                donkyCore.donkyData.set("configuration", result.response.configuration);
+
+                                delete result.response.configuration;
+                                // just store access dets
+                                donkyCore.donkyData.set("accessDetails", result.response);
+
+                                donkyCore.donkyData.remove("isSuspended");
+
+                                if (restart) {
+                                    donkyCore.donkyNetwork._startSignalR();
+                                }
+                                _refreshingToken = false;
+
+                                return( callback({ succeeded: true }) );
+                            } else {
+                                donkyCore.donkyLogging.warnLog("Failed to  refresh authorization token");
+                
+                                if(result.statusCode == 400 && result.response[0].failureKey === "UserNotFound"){
+                                                                                                                                                                                                                                            
+                                    var regSettings = {
+                                        userDetails: donkyCore.donkyData.get("userDetails"),
+                                        deviceDetails: donkyCore.donkyData.get("deviceDetails")
+                                    };
+                                                                                                                                           
+                                    _instance._registerUsingAuthentication(regSettings, function (result) {
+                                        _refreshingToken = false;
+
+                                        return( callback(result) );
+                                    });                    
+                                }else if(result.statusCode == 403){
+                                    donkyCore.donkyLogging.warnLog("Can't refresh token - have been suspended");
+                                    donkyCore.donkyData.set("isSuspended", true);                                        
+                                }
+                                else{
+                                    // ???
+                                    _refreshingToken = false;
+                                }
+                                
+                                
+                                return( callback(result) );
+
+                            }
+                    });            
+                });
+            }else{
+                _refreshingToken = false;
+            }
+        });
+        
     };
 
     /*
@@ -279,12 +418,13 @@ var DonkyAccount = (function () {
         return deviceId;
     };
 
-    /** This operation will return the current status of the SDK.
+    /** 
+     * This operation will return the current status of the SDK.
      * @memberof DonkyAccount
      * @returns {Boolean} - Indicates whether the SDK has a valid registration of not.
      */
     DonkyAccount.prototype.isRegistered = function () {
-        try {
+        try {            
             return donkyCore.donkyData.get("networkId") !== null;
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in isRegistered() : " + e);
@@ -321,10 +461,12 @@ var DonkyAccount = (function () {
         if (!donkyCore._isFunction(callback)) {
             throw new Error("resultHandler not supplied");
         }
-
+        
         if (settings.deviceDetails === undefined) {
             settings.deviceDetails = {};
         }
+
+        _registering = true;
 
         var registrationRequest = {
             device: settings.deviceDetails,
@@ -352,7 +494,6 @@ var DonkyAccount = (function () {
 
                     donkyCore.donkyData.set("networkId", result.response.networkId);
                     donkyCore.donkyData.set("networkProfileId", result.response.networkProfileId);
-
 
                     var configuration = result.response.accessDetails.configuration;
                     delete result.response.accessDetails.configuration;
@@ -387,6 +528,7 @@ var DonkyAccount = (function () {
                         }
                     });
                 }
+                _registering = false;
                 callback(result);
             });
 
@@ -496,7 +638,7 @@ var DonkyAccount = (function () {
                 throw new Error("neither userDetails or deviceDetails specified - must specify at least 1");
             }
 
-        } catch (e) {
+        }catch(e) {
             donkyCore.donkyLogging.errorLog("caught exception in updateRegistrationDetails() : " + e);
         }
     };
@@ -510,13 +652,25 @@ var DonkyAccount = (function () {
      * @param {Callback} resultHandler - The callback to invoke when the command has executed. Registration errors will be fed back through this.
      */
     DonkyAccount.prototype.replaceRegistration = function (settings, resultHandler) {
-        try {
+        try {            
             // need to clear out any pending notifications prior to registering a different user
             donkyCore.donkyNetwork.synchronise(function () {
-                // No need to restart signalR as is internally handled on receipt of the NewRegistration local event that is raised ...
-                _instance._register(settings, function (result) {
-                    resultHandler(result);
-                });
+                
+                if(donkyCore.donkyData.get("usingAuth") === true){
+                       
+                    // No need to restart signalR as is internally handled on receipt of the NewRegistration local event that is raised ...
+                    // TODO: loose the settings for now ... 
+                    _instance._registerUsingAuthentication(settings, function (result) {
+                        resultHandler(result);
+                    });                    
+                    
+                }else{
+                    // No need to restart signalR as is internally handled on receipt of the NewRegistration local event that is raised ...
+                    _instance._register(settings, function (result) {
+                        resultHandler(result);
+                    });                    
+                }
+                
             });
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in replaceRegistration() : " + e);
@@ -549,6 +703,19 @@ var DonkyAccount = (function () {
                 ]}
             }));                
         }
+                
+        // cannot change userId
+        if(donkyCore.donkyData.get("usingAuth") === true){
+            if( donkyCore.donkyData.get("userDetails").id !== settings.userDetails.id){
+                return( callback({
+                    succeeded: false,
+                    response: { failedClientNotifications: [{
+                                "failureReason": "Cannot Update UserId if using Authentication"
+                            }                        
+                    ] }
+                }));                                    
+            }            
+        }            
         
         var currentUserDetails = donkyCore.donkyData.get("userDetails");
         var currentUserId = currentUserDetails !== null ? currentUserDetails.id : undefined;
@@ -620,7 +787,20 @@ var DonkyAccount = (function () {
             if (!donkyCore._isFunction(callback)) {
                 throw new Error("callback not supplied");
             }
-
+            
+            // cannot change userId
+            if(donkyCore.donkyData.get("usingAuth") === true){
+                if( donkyCore.donkyData.get("userDetails").id !== userDetails.id){
+                    return( callback({
+                        succeeded: false,
+                        response: { failedClientNotifications: [{
+                                    "failureReason": "Cannot Update UserId if using Authentication"
+                                }                        
+                        ] }
+                    }));                                    
+                }            
+            }            
+            
             if (updatingDetails === true ) {
                 
                 return( callback({
@@ -844,9 +1024,284 @@ var DonkyAccount = (function () {
         } catch (e) {
             donkyCore.donkyLogging.errorLog("caught exception in putTags() : " + e);
         }
+    };
+        
+    /**
+     * Begin authenticated registration flow 
+     */    
+    DonkyAccount.prototype._registerUsingAuthentication = function (settings, callback) {
+    
+        if (!donkyCore._isFunction(callback)) {
+            throw new Error("callback not supplied");
+        }
 
+
+        _registering = true;
+
+        // get nonce and correlationId from Donky Network    
+        _authenticationStart(function(result){
+        
+            if(result.succeeded){
+
+                var correlationId = result.response.authenticationId; 
+
+                var userDetails = donkyCore.donkyData.get("userDetails");
+                                 
+                var options = {
+                    nonce: result.response.nonceRequired ? result.response.nonce : undefined,
+                    expectedUserId: userDetails !== null ? userDetails.id : undefined
+                };
+                
+                // get token (JWT) from Integrator          
+                _instance.onAuthenticationChallenge(options, function(token){            
+                                                    
+                    var request = {
+                        authenticationDetail: {
+                            provider: "JsonWebToken",
+                            token: token,
+                            authenticationId: correlationId                            
+                        },
+                        user: settings.userDetails,
+                        device: settings.deviceDetails,                        
+                        isReregistration: false                        
+                    };                        
+                                        
+                    // pass correlationId and token to Donky Network to complete registration
+                    _authenticatedRegistration(request, function(result){                
+                        // save this, start signalr, etc ...                                                            
+                        _registering = false;
+
+                        callback(result);
+                    });            
+                });
+            }else{
+                _registering = false;
+
+                callback(result);                
+            }
+        });        
+    };    
+
+    /**
+     * Function to register a  user. This is only to be used in conjunction with initialise() and setting autoRegister to false.
+     * User calls initialise() setting autoRegister property to false and then calls this at a later time.
+     * SDK must not be in the initialised state and there must be no existing registration for this flow to work.
+     * THe local event "DonkyInitialised" will be fired on succesful registration.
+     * @param {Object} settings
+     * @param {UserDetails} settings.userDetails - User details to use for the registration (optional)
+     * @param {DeviceDetails} settings.deviceDetails - Device details to use for the registration (optional)
+     * @param {Callback} callback - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
+     */
+    DonkyAccount.prototype.register = function(settings, callback){
+
+        if (!donkyCore._isFunction(callback)) {
+            throw new Error("callback not supplied");
+        }
+
+        if(donkyCore.getInitialisationStatus() !== donkyCore.initialisationStatus.initialisingPendingRegistration){
+            return callback({ success: false, data: { message: "SDK Must be in initialisingPendingRegistration state" } });
+        }
+
+        if(_instance.isRegistered()){
+            return callback({ success: false, data: { message: "A registered user already exists - use replaceRegistration() instead" } });
+        }
+        
+        if(_registering){
+            return callback({ success: false, data: { message: "A registered user already exists - use replaceRegistration() instead" } });
+        }
+
+        _instance._register(settings, function(result){
+            
+            if (result.succeeded) {                                                             
+                // notify client app we are now initialised                               
+                donkyCore.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+            }
+            
+            // notify client app we are now initialised           
+            callback(result);                            
+        });                                               
     };
 
+    
+    /**
+     * Function to register an authenticated user. This is only to be used in conjunction with authenticatedInitialise() and setting autoRegister to false.
+     * User calls authenticatedInitialise() setting autoRegister property to false and then calls this at a later time.
+     * SDK must not be in the initialised state and there must be no existing registration for this flow to work.
+     * THe local event "DonkyInitialised" will be fired on succesful registration.
+     * @param {Object} settings
+     * @param {UserDetails} settings.userDetails - User details to use for the registration (optional)
+     * @param {DeviceDetails} settings.deviceDetails - Device details to use for the registration (optional)
+     * @param {Callback} callback - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
+     */
+    DonkyAccount.prototype.registerAuthenticated = function(settings, callback){
+
+        if (!donkyCore._isFunction(callback)) {
+            throw new Error("callback not supplied");
+        }
+
+        if(donkyCore.getInitialisationStatus() !== donkyCore.initialisationStatus.initialisingPendingRegistration){
+            return callback({ success: false, data: { message: "SDK Must be in initialisingPendingRegistration state" } });
+        }
+
+        if(_registering){
+            return callback({ success: false, data: { message: "A registered user already exists - use replaceRegistration() instead" } });
+        }
+
+        if(_instance.isRegistered()){
+            return callback({ success: false, data: { message: "A registered user already exists - use replaceRegistration() instead" } });
+        }
+
+        // only allow if not currently registered as we 
+        _instance._registerUsingAuthentication(settings, function(result){
+            
+            if (result.succeeded) {                                                             
+                // notify client app we are now initialised                               
+                donkyCore.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+            }
+            
+            // notify client app we are now initialised           
+            callback(result);
+                            
+        });                                               
+    };
+    
+    /**
+     * Internal function to Start a new authentication process.
+     */
+    function _authenticationStart(callback) {
+        try {
+
+            if (!donkyCore._isFunction(callback)) {
+                throw new Error("callback not supplied");
+            }
+
+            donkyCore.donkyNetwork.ajax(
+                null,
+                "GET",
+                donkyCore.donkyNetwork.api.anonymous,
+                "authentication/start",
+                function (result) {
+                    callback(result);
+                });
+        } catch (e) {
+            donkyCore.donkyLogging.errorLog("caught exception in authenticationStart() : " + e);
+        }    
+    } 
+    
+    /**
+     * Internal function to  register a new authenticated device on the network
+     */
+    function _authenticatedRegistration  (request, callback) {
+        try {
+            if (!donkyCore._isFunction(callback)) {
+                throw new Error("callback not supplied");
+            }
+                                 
+            if (request.device === undefined) {
+                request.device = {};
+            }
+
+            extendDeviceDetails(request.device);
+
+            request.client =  {
+                sdkVersion: donkyCore.version(),
+                moduleVersions: donkyCore._moduleVersions,
+                currentLocalTime: new Date().toISOString()                            
+            };
+
+            donkyCore.donkyNetwork.ajax(
+                request,
+                "POST",
+                donkyCore.donkyNetwork.api.anonymous,
+                "authenticatedregistration",
+                function (result) {
+                                       
+                    if(result.succeeded){
+
+                        donkyCore.donkyData.set("usingAuth", true);
+                        
+                        donkyCore.donkyData.set("networkId", result.response.networkId);
+                        donkyCore.donkyData.set("networkProfileId", result.response.networkProfileId);
+
+
+                        var configuration = result.response.accessDetails.configuration;
+                        delete result.response.accessDetails.configuration;
+
+                        // server config returned with token
+                        donkyCore.donkyData.set("configuration", configuration);
+                        
+                        donkyCore.donkyData.set("accessDetails", result.response.accessDetails);
+
+                        // was that anonymous ? 
+                        var currentUser = request.user !== undefined ? request.user : { id: result.response.userId };
+                        
+                        // HACK as api is just retirning an anon user for now
+                        currentUser.id = result.response.userId;
+                        
+                        if (currentUser.displayName === undefined) {
+                            currentUser.displayName = result.response.userId;
+                        }
+
+                        // dont want these going to the client
+                        delete request.device.id;
+                        delete request.device.secret;
+
+                        donkyCore.donkyData.set("userDetails", currentUser);
+                        donkyCore.donkyData.set("deviceDetails", request.device);
+                        donkyCore.donkyData.set("clientDetails", request.client);
+
+                        donkyCore.publishLocalEvent({
+                            type: "RegistrationChanged",
+                            data: {
+                                userDetails: currentUser,
+                                deviceDetails: request.device,
+                                configuration: configuration
+                            }
+                        });
+                    }                                         
+
+                    callback(result);
+                });
+        } catch (e) {
+            donkyCore.donkyLogging.errorLog("caught exception in authenticatedRegistration() : " + e);
+        }          
+    }
+
+    /**
+     * Internal function to  re-validate external identity and get a new access token for accessing Donky services.
+     */
+    function _reauthenticate (request, callback) {
+        try {
+            if (!donkyCore._isFunction(callback)) {
+                throw new Error("callback not supplied");
+            }
+
+            donkyCore.donkyNetwork.ajax(
+                request,
+                "POST",
+                donkyCore.donkyNetwork.api.anonymous,
+                "authentication/reauthenticate",
+                function (result) {
+                    callback(result);                        
+            });
+            
+        } catch (e) {
+            donkyCore.donkyLogging.errorLog("caught exception in _reauthenticate() : " + e);
+        } 
+    }
+    
+    /**
+     * Internal function to return whether SDK is in the process of refreshing the donky auth token
+     */    
+    DonkyAccount.prototype._isRefreshingToken = function() {    
+        return _refreshingToken;
+    };
+    
+    /**
+     * Internal property to get the registered onAuthenticationChallenge callback (used for registration and re-auth)
+     */
+    DonkyAccount.prototype.onAuthenticationChallenge = _onAuthenticationChallenge;  
+    
     // Return the constructor
     return DonkyAccount;
 })();

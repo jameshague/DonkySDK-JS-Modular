@@ -130,7 +130,7 @@ DonkyCore is a composite interface that contains functionality broken down into 
 | Interface       		                                            | Example Usage| Description |
 |:------------- 		                                            |:------       |:------------|
 | [DonkyCore](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyCore.html) | donkyCore.initialise(...);  | DonkyCore object  |
-| [DonkyData](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyData.html) | donkyCore.donkyData,get(...);  | interface to provide data access  |
+| [DonkyData](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyData.html) | donkyCore.donkyData.get(...);  | interface to provide data access  |
 | [DonkyAccount](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyAccount.html) | donkyCore.donkyAccount.getTags(...);  | interface to provide account related functionality  |
 | [DonkyNetwork](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyNetwork.html) | donkyCore.donkyNetwork.synchronise(...);  | interface to  provide network access related functionality  |
 | [DonkyLogging](http://cdn.dnky.co/sdk/latest-modular/jsdoc/DonkyLogging.html) | donkyCore.donkyLogging.clearLog();  | interface to provide logging functionality  |
@@ -181,6 +181,7 @@ Internally, all associated dependencies with the interfaces you pick are resolve
 |:------------- 		|----------------:|
 | [Initialise anonymously](#initialise-anonymously)  | Initialize anonymously 	|
 | [Initialise as known user](#initialise-known-user)  | Initialize as a known user 	|
+| [Initialise an authenticated user](#initialise-authenticated-user)  | Initialize an authenticated user 	|
 | [Send content](#send-content)  | Send a custom message to a known user 	|
 | [Receive content](#receive-content)  | Receive a custom message  	|
 | [Assets](#assets)  | Upload assets 	|
@@ -233,7 +234,7 @@ require(['donkyCore'],function(donkyCore) {
         },
         resultHandler: function(result) {
             if(result.succeeded) {
-                var registrationDetails=donkyCore.donkyAccount.getRegistrationDetails();
+                var registrationDetails = donkyCore.donkyAccount.getRegistrationDetails();
                 console.log(JSON.stringify(registrationDetails));
             }else{
                 console.log(JSON.stringify(result));
@@ -242,6 +243,63 @@ require(['donkyCore'],function(donkyCore) {
     });
 });
 ```
+
+## Initialise (authenticated user)
+This example initialises Donky with an authenticated user.
+```javascript
+
+// get the donky interfaces we need for this demo ...
+require(['donkyCore'], function(donkyCore) {
+
+    /**
+     * Function provided by integrator and called by the sdk to get a JWT for the user you want to authenticate.
+     * This method will be called during registration and also during token re-authentication.
+     * @param {Object} options - object contining the following options:  
+     * @param {String} options.nonce - nonce to use when gennerating the JWT 
+     *      (Optional - if not using nonce will be undefined) 
+     * @param {String} options.expectedUserId - the userId of user we want to authenticate 
+     *      (this should appear as a "sub" claim in the JWT) 
+     * @param {Callback} answerAuthenticationChallenge  
+     */
+    function onAuthenticationChallenge(options, answerAuthenticationChallenge){
+        
+        jQuery.ajax({
+            url: 'https://yourdomain.com/api/authenticate',
+            dataType: 'json',
+            contentType: 'application/json; charset=utf-8',
+            data: JSON.stringify({ 
+                // pass nonce if required to generate JWT.
+                // user info could be passed in a cookie or manually added to this request payload  
+                nonce: options.nonce,
+            }),
+            type: 'POST',
+            success: function(obj) {
+                answerAuthenticationChallenge(obj.jwt); 
+            },
+            error: function() {
+                answerAuthenticationChallenge(null);                         
+            },
+        });            
+    }
+
+    // initialise donky ...
+    donkyCore.authenticatedInitialise({
+        apiKey: ">>>Enter API Key here<<<",
+        resultHandler: function(result) {
+            if(result.succeeded) {
+                var registrationDetails = donkyCore.donkyAccount.getRegistrationDetails();
+                console.log(JSON.stringify(registrationDetails));
+            }else{
+                console.log(JSON.stringify(result));
+			}
+        },
+        onAuthenticationChallenge: onAuthenticationChallenge,
+    });
+});
+
+
+```
+
 
 
 ## Send Content

@@ -38,6 +38,7 @@ var DonkyCore = (function() {
         initialised: 2,
         uninitialising: 3,
         failed: 4,
+        initialisingPendingRegistration: 5
     };
     
     var initStatus = initStatuses.uninitialised;
@@ -47,7 +48,6 @@ var DonkyCore = (function() {
         newDeviceTitle : "New Device ?",
         newDeviceBody : "A new device has been registered against your account; if you did not register this device please let us know immediately",
     };
-
 
 /**
  * Creates DonkyCore object.
@@ -786,9 +786,12 @@ var DonkyCore = (function() {
     * @param {UserDetails} settings.userDetails - User details to use for the registration (optional)
     * @param {DeviceDetails} settings.deviceDetails - Device details to use for the registration (optional)
     * @param {String} settings.appVersion - The app version as specified by the integrator (optional)
+    * @param {Boolean} settings.autoRegister - Boolean reprasenting whether to register a user during the initialisation flow or wait for an explicit call to the registration api
     * @param {Callback} settings.resultHandler - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
     */
     DonkyCore.prototype.initialise = function(settings) {
+        _instance.donkyData.set("usingAuth", false);
+
         var message;
         
         // Settings specified ?
@@ -862,15 +865,25 @@ var DonkyCore = (function() {
         _instance.donkyData.set("scheme", settings.scheme !== undefined ? settings.scheme : "https://");
     
         if (!_instance.donkyAccount.isRegistered()) {
-            // A brand new user ...
-            _instance.donkyAccount._register(settings, function(result) {
-                if (result.succeeded) {
-                    _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
-                }else{
-                    initStatus = initStatuses.failed;
-                }
-                settings.resultHandler(result);            
-            });
+            
+            if(settings.autoRegister !== false){
+                
+                // A brand new user ...
+                
+                _instance.donkyAccount._register(settings, function(result) {
+                    if (result.succeeded) {
+                        _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                    }else{
+                        initStatus = initStatuses.failed;
+                    }
+                    settings.resultHandler(result);            
+                });
+                
+            }else{
+                initStatus = initStatuses.initialisingPendingRegistration;                
+                settings.resultHandler({succeeded: true});
+            }
+
 
         } else {
             _instance.donkyAccount._checkToken(function(result) {
@@ -946,6 +959,124 @@ var DonkyCore = (function() {
         return initStatus;
     };
     
+
+    /**
+     * This operation should ensure the SDK is active, and that the device is registered on the network with 
+     * the correct API key and able to send/receive data.
+     * This should also ensure that the registered module details are passed to the network if changed.
+     * @memberof DonkyCore
+     * @param {Object} settings
+     * @param {string} settings.apiKey - The Client API key for the app space
+     * @param {string} settings.onAuthenticationChallenge - The authetitcation challenge callback which donky will call to get a token
+     * @param {Callback} settings.resultHandler - The callback to invoke when the SDK is initialised. Registration errors will be fed back through this.
+     * @param {Boolean} settings.autoRegister - Boolean reprasenting whether to register a user during the initialisation flow or wait for an explicit call to the registration api
+     * @param {UserDetails} settings.userDetails - User details to use for the registration (optional)
+     * @param {DeviceDetails} settings.deviceDetails - Device details to use for the registration (optional)
+     */
+     DonkyCore.prototype.authenticatedInitialise = function(settings){
+        
+        _instance.donkyData.set("usingAuth", true);
+        
+        var message;
+        // Settings specified ?
+        if (settings === undefined || settings === null) {                
+            throw new Error("no options specified");
+        }
+
+        if(settings.logLevel !== undefined){
+            _instance.donkyLogging._setLogLevel(settings.logLevel);
+        }
+
+        // ResultHandler specified ?
+        if (!_instance._isFunction(settings.resultHandler)) {
+            _instance.donkyLogging.warnLog("No ResultHandler specified");
+            throw new Error("resultHandler not specified");
+        }
+        
+        // onAuthenticationChallenge specified ?
+        if (!_instance._isFunction(settings.onAuthenticationChallenge)) {
+            _instance.donkyLogging.warnLog("No onAuthenticationChallenge ahndler specified");
+            throw new Error("onAuthenticationChallenge not specified");
+        }
+        
+        // cache this so we can use it in the refresh flow ...
+        _instance.donkyAccount.onAuthenticationChallenge = settings.onAuthenticationChallenge; 
+        
+        if(initStatus === initStatuses.initialising){
+            message = "initialise() called twice";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));                
+        }
+                    
+        var browserInfo = _instance.donkyAccount._getBrowserInfo();
+        
+        if(browserInfo.name === "MSIE" && browserInfo.version < 10){
+            message = "Unsupported version of IE: " + browserInfo.version + " (must be >=10)";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));
+        }               
+
+        // ApiKey specified ?
+        if (settings.apiKey === undefined) {
+            message = "No apiKey specified";
+            _instance.donkyLogging.warnLog(message);
+            return(settings.resultHandler({succeeded : false, response: message}));
+        }
+
+        initStatus = initStatuses.initialising;
+
+        // Different API key ?
+        var currentKey = _instance.donkyData.get("apiKey");
+
+        if (currentKey !== null && currentKey !== settings.apiKey) {
+            // remove this and isRegistered() will return false;
+            _instance.donkyData.remove("networkId");
+        }
+
+        _instance.donkyData.set("apiKey", settings.apiKey);
+
+        // to allow usage against dev (internal)
+        _instance.donkyData.set("environment", settings.environment !== undefined ? settings.environment : "");
+
+        _instance.donkyData.set("scheme", settings.scheme !== undefined ? settings.scheme : "https://");
+          
+        if (!_instance.donkyAccount.isRegistered()) {
+            
+            if(settings.autoRegister !== false){
+
+                var regSettings = {
+                    userDetails: settings.userDetails,
+                    deviceDetails: settings.deviceDetails
+                };
+                // A brand new user ...
+                _instance.donkyAccount._registerUsingAuthentication(regSettings, function(result){
+                    if (result.succeeded) {                                                             
+                        // notify client app we are now initialised                               
+                        _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });
+                    }else{
+                        initStatus = initStatuses.failed;
+                    }
+                    
+                    // notify client app we are now initialised           
+                    settings.resultHandler(result);
+                                    
+                });                                       
+            }else{
+                initStatus = initStatuses.initialisingPendingRegistration;
+                settings.resultHandler({succeeded: true});
+            }
+
+        } else {
+            
+            _instance.donkyAccount._checkToken(function(result) {
+                if(result.succeeded){
+                    _instance.publishLocalEvent({ type : "DonkyInitialised", data: {} });                    
+                }
+                settings.resultHandler(result);
+            }, 
+            true);
+        }                 
+     };
 
     /**
      * Private method that actually processes the subscription

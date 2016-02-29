@@ -169,6 +169,7 @@
 			
 	        var richMessages = (filter === "" || filter === undefined || filter === null) ? donkyRichLogic.getAllRichMessages() : donkyRichLogic.filterRichMessages(filter);
 	        
+            
 			// project raw donky messages objects into model suitable for mustache template
 	        var messages = [];
 		
@@ -189,14 +190,19 @@
 					Selected: selectedMessages[richMessage.messageId] === true
 	            });
 	        });
-																														
+						
+            var donkyInboxContainerUIService = donkyCore.getService("donkyInboxContainerUIService");                        
+                                                																								
 			var model = { 
 				// Array of messages
 				Messages: messages, 
 				// The filter text to render back into the input field if redrawing the entire view
 				Filter: filter, 
 				// Whether we are in editmodel
-				EditMode: editMode				 
+				EditMode: editMode, 
+                // Whether to display a back button - needed for mobile layout as inbox in container is full screen
+                // for this to be true, we need to be hosted in inboxContainerUI and viewing on a mobile device 
+                BackButton: donkyInboxContainerUIService !== null && donkyInboxContainerUIService.isMobile()				 
 			};
 			
 			return model;
@@ -268,6 +274,12 @@
 					}					
 	            }
 	        });
+
+	        // User has clicked a back button so go back to the homepage
+	        donkyUICommon.bindEvent(defaults.$iFrame, 'click', '.closeInboxContainer', function() {
+	            donkyCore.publishLocalEvent({ type : "closeInboxContainer", data: {} });
+	        });
+
 						
 	        // User is applying a filter to rich inbox
 	        // We store the filter incase there is a page reload and redraw the inbox 

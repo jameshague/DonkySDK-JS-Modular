@@ -220,6 +220,11 @@
 		
 		function subscribeToDonkyEvents(){
 			
+			// Back button functionality when inside a child view is decoupled. Using local events to trigger this behaviour.
+			donkyCore.subscribeToLocalEvent("closeInboxContainer", function(event) {
+                closeInboxContainer(defaults.defaultAnimationTimeout);
+			});	
+                        
 			// New rich message received 
 			donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event) {					
 				renderHandle();				
@@ -253,7 +258,10 @@
 			var isOpenService = {
 				isOpen: function(){
 					return isOpen;
-				}				
+				},
+                isMobile: function(){
+                    return isMobile;
+                }				
 			};  		
 		
 			donkyCore.registerService("donkyInboxContainerUIService", isOpenService);	
