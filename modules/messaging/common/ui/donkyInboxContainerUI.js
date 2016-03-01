@@ -397,6 +397,10 @@
 						        donkyCore.subscribeToLocalEvent("RichMessageRead", function(event) {
 									renderHandle();					
 								});
+
+						        donkyCore.subscribeToLocalEvent("RichMessageSyncOperation", function(event) {
+									renderHandle();					
+								});
 								
 								// A rich message has been deleted so re-render the handle (as badge count may have changed)
 						        donkyCore.subscribeToLocalEvent("RichMessageDeleted", function(event) {

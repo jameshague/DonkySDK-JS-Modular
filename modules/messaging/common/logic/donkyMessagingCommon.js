@@ -82,7 +82,6 @@
                     type: "MessageRead",
                     senderInternalUserId: message.senderInternalUserId,
                     messageId: message.messageId,
-                    conversationId: message.conversationId,
                     senderMessageId: message.senderMessageId,
                     messageType: message.messageType,
                     messageScope: message.messageScope,
@@ -95,6 +94,24 @@
                 
                 donkyCore.donkyNetwork.synchronise();
             },
+            /**
+             * Function to create and queue a MessageDeleted client notification.
+             * @param {Object} message - the message
+             * @param {Boolean} sync - whether to do a synchronise after queueing
+             */
+            markMessageDeleted: function(messageId, sync) {
+
+                var clientNotification = {
+                    type: "MessageDeleted",
+                    messageId: messageId
+                };
+
+                donkyCore.queueClientNotifications(clientNotification);    
+                
+                if(sync === true){
+                    donkyCore.donkyNetwork.synchronise();                    
+                }
+            },            
             /**
              * Function to create and queue a MessageShared client notification.
              * @param {Object} message - the message

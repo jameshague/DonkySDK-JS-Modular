@@ -167,6 +167,27 @@
                 }
             },
 			/**
+			 * Function to internally mark the message as read
+			 * @param {String[]} messageIds - the message ids
+			 */
+            markManyAsRead: function(messageIds) {
+                var markedReadCount = 0;
+                var richMessages = this.load();
+                var self = this;
+
+                donkyCore._each(messageIds, function(i, messageId){
+                    var index = self.findId(richMessages, messageId);
+                    if (index !== -1 && richMessages[index].isRead === false) {
+                        richMessages[index].isRead = true;
+                        markedReadCount++;
+                    }
+                });                
+                
+                if(markedReadCount>0){
+                    this.save(richMessages);                    
+                }
+            },
+			/**
 			 * Function to retrieve the nect unread message.
 			 * @returns {Object} the next unread message (or null)
 			 */
@@ -322,6 +343,38 @@
         }
 
 
+        /**
+         * 
+         */
+	    function onSyncMessageDeleted(notifications) {
+
+            var messageIds = [];
+                        
+            donkyCore._each(notifications, function(index, notification){
+                messageIds.push(notification.data.messageId);
+            });
+
+            _richMessageManager.removeMany(messageIds);     
+                        
+            donkyCore.publishLocalEvent({ type : "RichMessageSyncOperation", data: {messageIds: messageIds} });    
+        }
+        
+        /**
+         * 
+         */
+	    function onSyncMessageRead(notifications) {
+            var messageIds = [];
+
+            donkyCore._each(notifications, function(index, notification){
+                messageIds.push(notification.data.messageId);
+            });
+            
+            _richMessageManager.markManyAsRead(messageIds);
+                        
+            donkyCore.publishLocalEvent({ type : "RichMessageSyncOperation", data: {messageIds: messageIds} });    
+        }
+
+
         // donkyRichLogic
 		//====================
 
@@ -340,17 +393,32 @@
             
             _richMessageManager.removeUnavailableMessages();
 
+            var myModule = {
+                name: "DonkyRichLogic",
+                version: "2.0.1.0"
+            };
+
             // wire in the subscription to RichMessage
             donkyCore.subscribeToDonkyNotifications(
-                {
-                    name: "DonkyRichLogic",
-                    version: "2.0.1.0"
-                },
+                myModule,
                 { 
                     notificationType: "RichMessage",             
                     batchHandler: processRichMessages
                 },
                 false);
+                                
+            // wire in the subscription to RichMessage
+            donkyCore.subscribeToDonkyNotifications(
+                myModule,
+                [{ 
+                    notificationType: "SyncMessageRead",             
+                    batchHandler: onSyncMessageRead
+                },
+                { 
+                    notificationType: "SyncMessageDeleted",             
+                    batchHandler: onSyncMessageDeleted
+                }],
+                true);
                 
             // this event is published from _register()
             donkyCore.subscribeToLocalEvent("RegistrationChanged", function(event) {
@@ -403,7 +471,9 @@
 
                     donkyCore.donkyLogging.debugLog("DonkyRichLogic.deleteRichMessage(" + messageId + ")");
 
-                    _richMessageManager.remove(messageId);
+                    _richMessageManager.remove(messageId);    
+                    
+                    donkyMessagingCommon.markMessageDeleted(messageId, true);                
                     
                     donkyCore.publishLocalEvent({ type : "RichMessageDeleted", data: {messageId: messageId} });
 
@@ -422,6 +492,10 @@
 
                     _richMessageManager.removeMany(messageIds);
                     
+                    donkyCore._each(messageIds, function(index, messageId){
+                        donkyMessagingCommon.markMessageDeleted(messageId, index === messageIds.length - 1);                 
+                    });
+                                                            
                     donkyCore.publishLocalEvent({ type : "RichMessagesDeleted", data: {messageIds: messageIds} });
 
 		        }catch(e){

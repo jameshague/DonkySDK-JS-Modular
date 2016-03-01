@@ -660,7 +660,18 @@
 				loadTemplates(function(){
 					
 					// Update the sent time fields every minute																	
-					setInterval(updateRichMessagesListView, 60000);																						
+					setInterval(updateRichMessagesListView, 60000);
+                    
+		            donkyCore.subscribeToLocalEvent("RichMessageSyncOperation", function(event) {
+						var viewState = donkyUICommon.getInboxViewState();								
+												
+						if( viewState.view == donkyUICommon.inboxViews.richInbox){
+							// Only render inbox view if currently on the list view ...
+							renderRichInbox(false);	
+						}
+                        
+                    });                    
+                    																						
 								
 		            donkyCore.subscribeToLocalEvent("NewRichMessagesReceived", function(event) {
 						
